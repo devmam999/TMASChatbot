@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tmas-chatbot
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      # Install system dependencies for Manim
+      apt-get update && apt-get install -y \
+        ffmpeg \
+        texlive \
+        texlive-latex-extra \
+        texlive-fonts-extra \
+        texlive-latex-recommended \
+        texlive-science \
+        texlive-fonts-extra \
+        tipa \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgdk-pixbuf2.0-dev \
+        libffi-dev \
+        shared-mime-info
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11 

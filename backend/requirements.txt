@@ -1,0 +1,29 @@
+# FastAPI and web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# HTTP client for API calls
+httpx==0.25.2
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Image processing
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# OCR for image processing
+pytesseract==0.3.10
+
+# Manim for animations (updated for Python 3.12 compatibility)
+manim==0.19.0
+
+# Data validation
+pydantic==2.5.0
+
+# File handling
+aiofiles==23.2.1
+
+# Base64 encoding for images
+base64io==1.0.3 
