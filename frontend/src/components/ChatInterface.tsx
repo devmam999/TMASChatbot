@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { ChatMessage, InputType } from '../types';
-import { apiService, streamChatText, pollForVideo } from '../services/api';
+import type { ChatMessage } from '../types';
+import { apiService } from '../services/api';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 
