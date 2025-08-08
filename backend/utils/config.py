@@ -12,10 +12,9 @@ load_dotenv()
 class Settings:
     """Application settings loaded from environment variables"""
     
-    # OpenRouter API Configuration
-    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
-    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3-0324:free")
-    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    # Anthropic Claude API Configuration
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-1-20250805")
     
     # Server Configuration
     HOST: str = os.getenv("HOST", "0.0.0.0")
@@ -41,8 +40,8 @@ class Settings:
     @classmethod
     def validate_config(cls) -> bool:
         """Validate that required configuration is present"""
-        if not cls.OPENROUTER_API_KEY:
-            raise ValueError("OPENROUTER_API_KEY is required")
+        if not cls.ANTHROPIC_API_KEY:
+            raise ValueError("ANTHROPIC_API_KEY is required")
         return True
 
 

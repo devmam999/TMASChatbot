@@ -1,5 +1,5 @@
 """
-AI service for communicating with OpenRouter API
+AI service for communicating with Anthropic Claude API
 Handles text and image processing, generates explanations and Manim code
 """
 import httpx
@@ -12,15 +12,14 @@ from utils.config import settings
 
 
 class AIService:
-    """Service for interacting with OpenRouter API"""
+    """Service for interacting with Anthropic Claude API"""
     
     def __init__(self):
-        self.api_key = settings.OPENROUTER_API_KEY
-        self.base_url = settings.OPENROUTER_BASE_URL
-        self.model = settings.OPENROUTER_MODEL
+        self.api_key = settings.ANTHROPIC_API_KEY
+        self.model = settings.ANTHROPIC_MODEL
         
         if not self.api_key:
-            raise ValueError("OPENROUTER_API_KEY is required")
+            raise ValueError("ANTHROPIC_API_KEY is required")
     
     async def generate_response(
         self, 
@@ -161,190 +160,73 @@ IMPORTANT REQUIREMENTS:
 - Use the latest Manim syntax (v0.19.0+)
 - The animation should be educational and visually appealing
 - Keep the animation duration reasonable (10-30 seconds for substantial content)
-- Use clear colors and readable text
-- Include proper imports and scene class definition
-- Create SUBSTANTIAL animations with multiple steps, not just static text
+- Include multiple sequential animation steps (5–10 minimum for complex topics)
+- Use clear colors (RED, GREEN, BLUE) and readable text (TEXT with font size 24+)
+- Include proper imports and scene class definition (from manim import *, Scene subclasses, etc.)
 - Show step-by-step processes with visual transitions
 - Use animations like Create(), Write(), Transform(), MoveTo(), etc.
-- Include at least 5-10 animation steps for complex algorithms
 - Make sure animations are engaging and educational
+- Use pauses (wait()) between important steps so the viewer can follow the reasoning
 
-CRITICAL MANIM GRAPH REQUIREMENTS:
-- When creating graphs, use proper edge format: edges = [(node1, node2), ...]
-- For Graph() constructor, edges must be tuples: (node1, node2) without weights
-- Use vertices = [1, 2, 3, ...] for node labels
-- Use edges = [(1, 2), (1, 3), ...] for edges (no weights in tuples)
-- For edge labels, use: edge_labels = {(1, 2): "7", (1, 3): "9", ...}
-- Graph constructor should be: Graph(vertices, edges, labels=True, edge_labels=edge_labels)
-- DO NOT use edge_type=LabeledArrow or edge_labels as a direct parameter
-- DO NOT use edge_labels=edge_labels in the constructor - this is WRONG
-- The correct syntax is: Graph(vertices, edges, labels=True, edge_labels=edge_labels)
-- Always test your graph creation before adding animations
-- Create SUBSTANTIAL animations with multiple steps and visual effects
-- Make sure animations are at least 10-30 seconds long with multiple steps
-- Show the algorithm working step by step, not just static text
-- Use colors, highlights, and movements to demonstrate the concept
-- Include at least 3-5 animation steps for complex algorithms
+EDUCATIONAL STRUCTURE:
 
-RESPONSE FORMAT:
-1. First provide a detailed explanation (2-3 paragraphs)
-2. Then provide the complete Manim Python code in a code block
+Each animation should include:
 
-Example Manim code structure:
-```python
+- Title introduction — show the concept name in a large, readable font
+
+- Step-by-step buildup — introduce elements gradually and explain each stage visually
+
+- Highlighting important parts — use color changes, scaling, and highlighting to show focus
+
+- Transitions between states — avoid abrupt changes; show the process evolving
+
+- Summary or conclusion — recap the key idea at the end with a short final statement
+
+
+OUTPUT FORMAT
+Educational Explanation — 2–3 paragraphs, simple and clear, describing the concept and its real-world relevance
+
+Complete Manim Python Code — in a code block, ready to run
+
+Example python code structure:
+
 from manim import *
 
 class ConceptAnimation(Scene):
     def construct(self):
-        # Create substantial animation with multiple steps
-        title = Text("Concept Title", font_size=36, color=BLUE)
+        # Step 1: Title
+        title = Text("Concept Name", font_size=36, color=BLUE)
         self.play(Write(title))
-        self.wait(0.5)
-        
-        # Step 1: Show initial state
-        step1 = Text("Step 1: Initial Setup", font_size=24).next_to(title, DOWN)
-        self.play(Write(step1))
-        self.wait(0.5)
-        
-        # Step 2: Create and animate objects
-        circle = Circle(color=RED, radius=0.5).shift(LEFT * 2)
-        square = Square(color=GREEN, side_length=1).shift(RIGHT * 2)
+        self.wait(1)
+
+        # Step 2: First visual setup
+        subtitle = Text("Step 1: Initial State", font_size=28).next_to(title, DOWN)
+        self.play(Write(subtitle))
+        self.wait(1)
+
+        # Step 3: Create objects
+        circle = Circle(color=RED).shift(LEFT*2)
+        square = Square(color=GREEN).shift(RIGHT*2)
         self.play(Create(circle), Create(square))
-        self.wait(0.5)
-        
-        # Step 3: Show transformation
-        self.play(
-            circle.animate.scale(1.5).set_color(PURPLE),
-            square.animate.rotate(PI/4).set_color(ORANGE)
-        )
-        self.wait(0.5)
-        
-        # Step 4: Add connecting elements
-        line = Line(circle.get_center(), square.get_center(), color=WHITE)
+        self.wait(1)
+
+        # Step 4: Transform objects
+        self.play(circle.animate.scale(1.5).set_color(PURPLE),
+                  square.animate.rotate(PI/4).set_color(ORANGE))
+        self.wait(1)
+
+        # Step 5: Connect elements
+        line = Line(circle.get_center(), square.get_center(), color=YELLOW)
         self.play(Create(line))
-        self.wait(0.5)
-        
-        # Step 5: Final state
-        final_text = Text("Process Complete!", font_size=28, color=GREEN)
+        self.wait(1)
+
+        # Step 6: Final message
+        final_text = Text("Concept Complete!", font_size=30, color=GREEN).shift(DOWN*2)
         self.play(Write(final_text))
-        self.wait(1)
-        
-        # Clean up
-        self.play(FadeOut(VGroup(title, step1, circle, square, line, final_text)))
-        self.wait(0.5)
-```
-
-Example for graph algorithms (like Dijkstra's):
-```python
-from manim import *
-
-class DijkstraAnimation(Scene):
-    def construct(self):
-        # Title
-        title = Text("Dijkstra's Algorithm", font_size=36, color=BLUE)
-        self.play(Write(title))
-        self.wait(0.5)
-        
-        # Create vertices and edges properly
-        vertices = [1, 2, 3, 4, 5, 6]
-        edges = [(1, 2), (1, 3), (1, 6), (2, 3), (2, 4), (3, 4), (3, 6), (4, 5), (5, 6)]
-        
-        # Create graph with proper format (no weights in edges)
-        g = Graph(vertices, edges, layout="kamada_kawai")
-        g.scale(1.5)
-        g.to_edge(LEFT)
-        
-        # Show initial graph
-        self.play(Create(g))
-        self.wait(1)
-        
-        # Initialize distances display
-        distance_panel = VGroup()
-        for v in vertices:
-            dist_text = Text(f"d({v}) = ∞", font_size=20, color=RED)
-            distance_panel.add(dist_text)
-        distance_panel.arrange(DOWN, aligned_edge=LEFT).to_edge(RIGHT)
-        self.play(Write(distance_panel))
-        self.wait(0.5)
-        
-        # Step 1: Start with node 1
-        start_node = g.vertices[1]
-        self.play(start_node.animate.set_color(YELLOW))
-        self.wait(0.5)
-        
-        # Update distance for start node
-        new_dist_text = Text("d(1) = 0", font_size=20, color=GREEN)
-        new_dist_text.move_to(distance_panel[0])
-        self.play(Transform(distance_panel[0], new_dist_text))
-        self.wait(0.5)
-        
-        # Step 2: Process neighbors of node 1
-        neighbors = [(2, 7), (3, 9), (6, 14)]
-        for neighbor, weight in neighbors:
-            edge = g.edges[(1, neighbor)]
-            neighbor_node = g.vertices[neighbor]
-            
-            # Highlight edge being considered
-            self.play(edge.animate.set_color(RED).set_stroke_width(8))
-            self.wait(0.3)
-            
-            # Update distance
-            new_dist_text = Text(f"d({neighbor}) = {weight}", font_size=20, color=GREEN)
-            new_dist_text.move_to(distance_panel[neighbor-1])
-            self.play(Transform(distance_panel[neighbor-1], new_dist_text))
-            self.wait(0.3)
-            
-            # Reset edge color
-            self.play(edge.animate.set_color(WHITE).set_stroke_width(4))
-            self.wait(0.2)
-        
-        # Step 3: Select node 2 (smallest distance)
-        self.play(start_node.animate.set_color(BLUE))  # Mark as processed
-        self.play(g.vertices[2].animate.set_color(YELLOW))
-        self.wait(0.5)
-        
-        # Process neighbors of node 2
-        node2_neighbors = [(3, 10), (4, 15)]
-        for neighbor, weight in node2_neighbors:
-            edge = g.edges[(2, neighbor)]
-            neighbor_node = g.vertices[neighbor]
-            
-            self.play(edge.animate.set_color(RED).set_stroke_width(8))
-            self.wait(0.3)
-            
-            # Update distance if better
-            if neighbor == 3:  # Keep existing distance (9 < 10)
-                new_dist_text = Text(f"d(3) = 9 (unchanged)", font_size=20, color=ORANGE)
-            else:
-                new_dist_text = Text(f"d(4) = 15", font_size=20, color=GREEN)
-            
-            new_dist_text.move_to(distance_panel[neighbor-1])
-            self.play(Transform(distance_panel[neighbor-1], new_dist_text))
-            self.wait(0.3)
-            
-            self.play(edge.animate.set_color(WHITE).set_stroke_width(4))
-            self.wait(0.2)
-        
-        # Continue with more steps...
-        self.play(g.vertices[2].animate.set_color(BLUE))
-        self.play(g.vertices[3].animate.set_color(YELLOW))
-        self.wait(0.5)
-        
-        # Show final shortest path
-        shortest_path_edges = [(1, 2), (2, 4), (4, 5)]
-        for edge in shortest_path_edges:
-            edge_obj = g.edges[edge]
-            self.play(edge_obj.animate.set_color(YELLOW).set_stroke_width(8))
-            self.wait(0.5)
-        
-        # Final summary
-        summary = Text("Shortest Path Found!", font_size=28, color=GREEN)
-        summary.next_to(title, DOWN)
-        self.play(Write(summary))
         self.wait(2)
-        
-        # Clean up
-        self.play(FadeOut(VGroup(title, summary, g, distance_panel)))
+
+        # Step 7: Fade out
+        self.play(FadeOut(VGroup(title, subtitle, circle, square, line, final_text)))
         self.wait(0.5)
 ```
 """
@@ -398,70 +280,93 @@ class DijkstraAnimation(Scene):
         return messages
     
     async def _make_api_request(self, messages: list) -> Dict[str, Any]:
-        """Make the actual API request to OpenRouter"""
+        """Make the actual API request to Anthropic Claude"""
+        anthropic_url = "https://api.anthropic.com/v1/messages"
         max_retries = 2
+
+        # Extract system prompt separately (Claude expects it as its own field)
+        system_prompt = ""
+        if messages and messages[0]["role"] == "system":
+            system_prompt = messages[0]["content"]
+            messages = messages[1:]
+
+        # Convert messages to Claude's block format
+        anthropic_messages = []
+        for msg in messages:
+            anthropic_messages.append({
+                "role": msg["role"],
+                "content": (
+                    [{"type": "text", "text": msg["content"]}]
+                    if isinstance(msg["content"], str)
+                    else msg["content"]  # Already in Claude's block format
+                )
+            })
+
         for attempt in range(max_retries + 1):
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(
-                        f"{self.base_url}/chat/completions",
+                        anthropic_url,
                         headers={
-                            "Authorization": f"Bearer {self.api_key}",
-                            "Content-Type": "application/json",
+                            "x-api-key": self.api_key,
+                            "anthropic-version": "2023-06-01",
+                            "content-type": "application/json",
                             "HTTP-Referer": "http://localhost:5173",
                             "X-Title": "TMAS Chatbot"
                         },
                         json={
                             "model": self.model,
-                            "messages": messages,
                             "max_tokens": 4000,
-                            "temperature": 0.7
+                            "temperature": 0.7,
+                            "system": system_prompt,
+                            "messages": anthropic_messages
                         },
-                        timeout=120.0  # Increased from 60.0 to match main.py timeout
+                        timeout=120.0
                     )
-                    
+
                     if response.status_code != 200:
-                        raise Exception(f"API request failed: {response.status_code} - {response.text}")
-                    
+                        raise Exception(
+                            f"API request failed: {response.status_code} - {response.text}"
+                        )
+
                     return response.json()
-                    
+
             except httpx.TimeoutException:
                 if attempt < max_retries:
                     print(f"API request timed out, retrying... (attempt {attempt + 1}/{max_retries + 1})")
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2 ** attempt)
                 else:
                     raise Exception("API request timed out after all retries")
+
             except Exception as e:
                 if attempt < max_retries:
                     print(f"API request failed, retrying... (attempt {attempt + 1}/{max_retries + 1}): {str(e)}")
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2 ** attempt)
                 else:
                     raise
+
     
     def _parse_response(self, api_response: Dict[str, Any]) -> Tuple[str, str]:
-        """Parse the API response to extract explanation and Manim code"""
+        """Parse Claude API response into explanation + Manim code"""
         try:
-            content = api_response["choices"][0]["message"]["content"]
-            print(f"[AIService] Raw API response length: {len(content)}")
-            print(f"[AIService] Raw API response preview: {content[:200]}...")
+            if "content" not in api_response:
+                raise Exception("Unexpected Claude API response format")
 
-            # Use regex to extract the first python code block
-            code_match = re.search(r"```python(.*?)(```|$)", content, re.DOTALL)
+            content_text = "".join(
+                block["text"] for block in api_response["content"] if block["type"] == "text"
+            )
+
+            # Extract code if present
+            code_match = re.search(r"```python(.*?)(```|$)", content_text, re.DOTALL)
             if code_match:
                 code = code_match.group(1).strip()
-                explanation = content.split("```python")[0].strip()
-                print(f"[AIService] Found code block, code length: {len(code)}")
-                print(f"[AIService] Code preview: {code[:100]}...")
-                print(f"[AIService] Explanation length: {len(explanation)}")
+                explanation = content_text.split("```python")[0].strip()
                 return explanation, code
             else:
-                # No code block found, return entire response as explanation
-                print(f"[AIService] No code block found in response")
-                return content.strip(), ""
+                return content_text.strip(), ""
         except Exception as e:
-            print(f"[AIService] Error parsing response: {str(e)}")
-            raise Exception(f"Failed to parse API response: {str(e)}")
-    
+            raise Exception(f"Failed to parse Claude API response: {str(e)}")
+                
     async def debug_manim_code(self, code: str, error: str) -> str:
         """
         Given faulty Manim code and an error message, ask the LLM to debug and fix the code.
@@ -496,7 +401,7 @@ class DijkstraAnimation(Scene):
             # Use a shorter timeout for connection test
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
-                    f"{self.base_url}/chat/completions",
+                    "https://api.anthropic.com/v1/messages",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",

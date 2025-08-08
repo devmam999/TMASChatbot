@@ -15,7 +15,7 @@ This web application allows users to submit text and/or images to get AI-generat
 
 ### Backend (FastAPI + Python)
 - **Framework**: FastAPI
-- **AI Provider**: OpenRouter API (DeepSeek model)
+- **AI Provider**: Anthropic Claude
 - **Animation**: Manim library
 - **Hosting**: Render
 
@@ -32,7 +32,7 @@ TMASInternship/
 │   ├── main.py             # FastAPI application
 │   ├── models.py           # Pydantic models
 │   ├── services/           # Business logic
-│   │   ├── ai_service.py        # OpenRouter API integration
+│   │   ├── ai_service.py        # Anthropic Claude API integration
 │   │   ├── manim_service.py     # Manim code execution
 │   │   └── image_service.py     # Image processing
 │   ├── utils/              # Utility functions
@@ -64,12 +64,12 @@ TMASInternship/
 ### Prerequisites
 - Python 3.8+ with pip
 - Node.js 16+ with npm
-- OpenRouter API key (get from https://openrouter.ai/keys)
+- Anthropic API key (get from https://console.anthropic.com/keys)
 
 ### Backend Setup
 1. Navigate to `backend/`
 2. Copy `.env.example` to `.env`
-3. Add your `OPENROUTER_API_KEY` to `.env`
+3. Add your `ANTHROPIC_API_KEY` to `.env`
 4. Install dependencies: `pip install -r requirements.txt`
 5. Run: `uvicorn main:app --reload --host 0.0.0.0 --port 8000`
 
@@ -130,10 +130,9 @@ npm run dev
 
 ### Backend (.env)
 ```
-# OpenRouter API Configuration
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=deepseek/deepseek-chat-v3-0324:free
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+# Anthropic Claude API Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-opus-4-1-20250805
 
 # Server Configuration
 HOST=0.0.0.0
@@ -173,7 +172,7 @@ VITE_BACKEND_URL=http://localhost:8000
 3. **Backend Processing**: 
    - Processes image with OCR/VLM if present
    - Combines text and image analysis
-   - Sends prompt to OpenRouter API (DeepSeek model)
+   - Sends prompt to Anthropic Claude
    - Receives explanation + Manim Python code
 4. **Animation Generation**: 
    - Executes Manim code server-side
@@ -187,7 +186,7 @@ VITE_BACKEND_URL=http://localhost:8000
 
 ## 🛠️ Technologies Used
 
-- **AI**: OpenRouter API (DeepSeek model)
+- **AI**: Anthropic Claude
 - **Animation**: Manim library (v0.18.0+)
 - **Backend**: FastAPI, Python, Uvicorn
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
@@ -200,7 +199,7 @@ VITE_BACKEND_URL=http://localhost:8000
 
 1. **Backend won't start**: Check if port 8000 is available
 2. **Frontend can't connect**: Verify `VITE_BACKEND_URL` in `.env`
-3. **API errors**: Ensure `OPENROUTER_API_KEY` is valid
+3. **API errors**: Ensure `ANTHROPIC_API_KEY` is valid
 4. **Manim errors**: Check Python dependencies and Manim installation
 5. **CORS errors**: Verify `ALLOWED_ORIGINS` includes frontend URL
 
