@@ -1,4 +1,4 @@
-# TMAS Internship - AI Chatbot with Manim Animations
+# TMAS Chatbot - AI Chatbot with Manim Animations
 
 ## 🎯 Project Overview
 
