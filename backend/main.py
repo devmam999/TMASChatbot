@@ -252,6 +252,11 @@ async def chat_stream_endpoint(
     text: Optional[str] = Form(None, description="Text input from user"),
     image: Optional[UploadFile] = File(None, description="Image file upload")
 ):
+    headers = {
+        "Access-Control-Allow-Origin": "https://tmas-internship.vercel.app",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Headers": "*"
+    }
     try:
         if not text and not image:
             raise HTTPException(status_code=400, detail="Either text or image must be provided")
@@ -412,7 +417,7 @@ async def chat_stream_endpoint(
         error_message = str(e)
         async def error_stream():
             yield f"Sorry, I encountered an error: {error_message}"
-        return StreamingResponse(error_stream(), media_type="text/plain")
+        return StreamingResponse(error_stream(), media_type="text/plain", headers=headers)
 
 @app.get("/chat/video/{request_id}")
 async def get_video(request_id: str):
