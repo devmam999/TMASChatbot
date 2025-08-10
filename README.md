@@ -40,6 +40,7 @@ TMASInternship/
 │   │   └── file_utils.py        # File handling utilities
 │   ├── requirements.txt    # Python dependencies
 │   └── .env.example       # Environment variables template
+|   └── Dockerfile         # Docker package containing the FastAPI backend service
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # React components
@@ -65,13 +66,14 @@ TMASInternship/
 - Python 3.8+ with pip
 - Node.js 16+ with npm
 - Anthropic API key (get from https://console.anthropic.com/keys)
+- Docker 20.10+
 
 ### Backend Setup
 1. Navigate to `backend/`
 2. Copy `.env.example` to `.env`
 3. Add your `ANTHROPIC_API_KEY` to `.env`
-4. Install dependencies: `pip install -r requirements.txt`
-5. Run: `uvicorn main:app --reload --host 0.0.0.0 --port 8000`
+4. Build the Docker Image: `docker build -t tmas-backend ./backend`
+5. Run the Docker Container: `docker run -p 8000:8000 tmas-backend`
 
 ### Frontend Setup
 1. Navigate to `frontend/`
@@ -87,8 +89,8 @@ TMASInternship/
 **Terminal 1 - Backend:**
 ```bash
 cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+docker build -t tmas-backend ./backend
+docker run -p 8000:8000 tmas-backend
 ```
 
 **Terminal 2 - Frontend:**
@@ -188,7 +190,7 @@ VITE_BACKEND_URL=http://localhost:8000
 
 - **AI**: Anthropic Claude
 - **Animation**: Manim library (v0.18.0+)
-- **Backend**: FastAPI, Python, Uvicorn
+- **Backend**: FastAPI, Python, Uvicorn, Docker
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
 - **Image Processing**: Pillow, OpenCV, pytesseract
 - **Deployment**: Render (backend), Vercel (frontend)
