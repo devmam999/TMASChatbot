@@ -151,7 +151,7 @@ class ManimService:
                             text=True,
                             env=os.environ.copy(),
                             cwd=temp_dir,
-                            timeout=120
+                            timeout=300
                         )
                     ),
                     timeout=130
