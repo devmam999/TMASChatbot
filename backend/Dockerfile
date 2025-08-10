@@ -25,4 +25,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Command to run your app (change if your main file or command differs)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
