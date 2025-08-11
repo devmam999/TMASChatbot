@@ -40,7 +40,7 @@ TMASInternship/
 │   │   └── file_utils.py        # File handling utilities
 │   ├── requirements.txt    # Python dependencies
 │   └── .env.example       # Environment variables template
-|   └── Dockerfile         # Docker package containing the FastAPI backend service
+|   └── Dockerfile         # Docker container containing the FastAPI backend service
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # React components
