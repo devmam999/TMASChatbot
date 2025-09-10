@@ -13,7 +13,8 @@ import re
 import asyncio
 import uuid
 import types
-from fastapi import Response
+from fastapi import Response, APIRouter, Request
+from pydantic import BaseModel
 
 # Import our models and services
 from models import ChatRequest, ChatResponse, HealthResponse, InputType
@@ -560,6 +561,28 @@ async def serve_media(filename: str):
     
     return FileResponse(file_path)
 
+# Define Quiz-related models
+class QuizRequest(BaseModel):
+    explanation: str
+
+class QuizQuestion(BaseModel):
+    question: str
+    options: dict[str, str]  # A, B, C, D -> option text
+    correctAnswer: str  # A, B, C, or D
+    explanation: str
+    hint: str
+
+class QuizResponse(BaseModel):
+    questions: list[QuizQuestion]
+
+@app.post("/generate-quiz", response_model=QuizResponse)
+async def generate_quiz(request: QuizRequest):
+    # Use your AI service to generate quiz questions
+    quiz = await ai_service.generate_quiz(request.explanation)
+    # print(f"Generated quiz data: {quiz}")
+    response = QuizResponse(questions=quiz)
+    # print(f"QuizResponse: {response}")
+    return response
 
 if __name__ == "__main__":
     import uvicorn
@@ -569,4 +592,4 @@ if __name__ == "__main__":
         host=settings.HOST,
         port=settings.PORT,
         reload=False,  # Disabled to prevent conflicts with Manim temp files
-    ) 
+    )

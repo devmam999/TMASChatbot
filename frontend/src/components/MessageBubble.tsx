@@ -9,19 +9,77 @@ import VideoPlayer from './VideoPlayer';
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  setQuizData: React.Dispatch<React.SetStateAction<any>>;
+  setIsQuizLoading: React.Dispatch<React.SetStateAction<{ [id: string]: boolean }>>;
+  isQuizLoading: boolean;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, setQuizData, setIsQuizLoading, isQuizLoading }) => {
   const isUser = message.type === 'user';
-  
+  const isAI = message.type === 'ai';
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  const handleGenerateQuizClick = async () => {
+    try {
+      setIsQuizLoading((prev: any) => ({ ...prev, [message.id]: true }));
+      const response = await fetch(`${backendUrl}/generate-quiz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ explanation: message.content })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const quiz = await response.json();
+      console.log('Quiz response from backend:', quiz);
+
+      // Normalize quiz data for InteractiveQuiz
+      const normalizedQuiz = {
+        ...quiz,
+        questions: Array.isArray(quiz.questions)
+          ? quiz.questions.map((q: any) => {
+            // If options is array, convert to object {A: '...', B: '...', ...}
+            let optionsObj = q.options;
+            if (Array.isArray(q.options)) {
+              optionsObj = {};
+              q.options.forEach((opt: any, idx: number) => {
+                // Use A, B, C, D... as keys
+                const key = String.fromCharCode(65 + idx);
+                optionsObj[key] = opt;
+              });
+            }
+            // If correctAnswer is value, convert to key
+            let correctKey = q.correctAnswer;
+            if (optionsObj && q.correctAnswer && !optionsObj[q.correctAnswer]) {
+              // Try to find key by value
+              correctKey = Object.keys(optionsObj).find(
+                k => optionsObj[k] === q.correctAnswer
+              ) || q.correctAnswer;
+            }
+            return {
+              ...q,
+              options: optionsObj,
+              correctAnswer: correctKey,
+            };
+          })
+          : [],
+      };
+      setQuizData(normalizedQuiz);
+    } catch (error) {
+      console.error('Failed to generate quiz:', error);
+    } finally {
+      setIsQuizLoading((prev: any) => ({ ...prev, [message.id]: false }));
+    }
+  };
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${isUser ? 'order-2' : 'order-1'}`}>
         {/* Avatar */}
         <div className={`flex items-center mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-            isUser ? 'bg-blue-500' : 'bg-green-500'
-          }`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${isUser ? 'bg-blue-500' : 'bg-green-500'
+            }`}>
             {isUser ? 'U' : 'AI'}
           </div>
           <span className={`text-xs text-gray-500 ml-2 ${isUser ? 'mr-2' : 'ml-2'}`}>
@@ -30,11 +88,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         </div>
 
         {/* Message Content */}
-        <div className={`rounded-lg p-3 ${
-          isUser 
-            ? 'bg-blue-500 text-white' 
-            : 'bg-white border border-gray-200 text-gray-800'
-        }`}>
+        <div className={`rounded-lg p-3 ${isUser
+          ? 'bg-blue-500 text-white'
+          : 'bg-white border border-gray-200 text-gray-800'
+          }`}>
           {/* Text Content */}
           <div className={`whitespace-pre-wrap ${isUser ? 'text-white' : 'text-gray-800'}`}>
             {message.content}
@@ -63,11 +120,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           {/* Animation Base64 Video */}
           {message.animation_base64 && !isUser && (
             <div className="mt-3">
-              <video 
-                controls 
-                autoPlay 
-                muted 
-                loop 
+              <video
+                controls
+                autoPlay
+                muted
+                loop
                 style={{ maxWidth: '100%', borderRadius: '8px' }}
                 className="w-full"
               >
@@ -85,10 +142,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
               </span>
             </div>
           )}
+
+          {/* Generate Quiz Button for AI Messages (but NOT for the welcome message) */}
+          {isAI && message.id !== 'welcome' && message.content && message.content.trim().length > 10 && (
+            <div className="mt-2">
+              {isQuizLoading ? (
+                <div className="flex items-center space-x-2 bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <span>Generating Quiz...</span>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGenerateQuizClick}
+                  className="bg-green-500 text-white text-xs px-3 py-1 rounded hover:bg-green-600 transition cursor-pointer"
+                  disabled={isQuizLoading}
+                >
+                  Generate Quiz
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   );
 };
 
-export default MessageBubble; 
+export default MessageBubble;

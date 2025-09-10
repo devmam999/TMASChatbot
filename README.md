@@ -5,19 +5,21 @@
 This web application allows users to submit text and/or images to get AI-generated explanations with custom Manim animations.
 
 ### Features
-- ✅ Text-only input
-- ✅ Image-only input (with OCR/VLM processing)
-- ✅ Combined text and image input
-- 🔄 Real-time Manim animation generation
-- 🎬 Inline video playback in chat interface
+ - ✅ Text-only input
+ - ✅ Image-only input (with OCR/VLM processing)
+ - ✅ Combined text and image input
+ - ✅ Interactive quiz generation from AI explanations
+ - 🔄 Real-time Manim animation generation
+ - 🎬 Inline video playback in chat interface
 
 ## 🏗️ Architecture
 
 ### Backend (FastAPI + Python)
-- **Framework**: FastAPI
-- **AI Provider**: Anthropic Claude
-- **Animation**: Manim library
-- **Hosting**: Render
+ - **Framework**: FastAPI
+ - **AI Provider**: Anthropic Claude and Gemini for explanations
+ - **Animation**: Manim library
+ - **Quiz Generation**: Custom logic for interactive quizzes
+ - **Hosting**: Render
 
 ### Frontend (React + TypeScript)
 - **Framework**: React with TypeScript
@@ -48,6 +50,7 @@ TMASInternship/
 │   │   │   ├── ChatInput.tsx        # Input component
 │   │   │   ├── MessageBubble.tsx    # Message display
 │   │   │   ├── FileUpload.tsx       # File upload component
+│   │   │   ├── InteractiveQuiz.tsx  # Interactive quiz component
 │   │   │   └── VideoPlayer.tsx      # Video player component
 │   │   ├── services/       # API services
 │   │   │   └── api.ts              # API communication
@@ -174,7 +177,7 @@ VITE_BACKEND_URL=http://localhost:8000
 3. **Backend Processing**: 
    - Processes image with OCR/VLM if present
    - Combines text and image analysis
-   - Sends prompt to Anthropic Claude
+   - Sends prompt to Anthropic Claude or Gemini
    - Receives explanation + Manim Python code
 4. **Animation Generation**: 
    - Executes Manim code server-side
@@ -185,6 +188,10 @@ VITE_BACKEND_URL=http://localhost:8000
    - Shows explanation text
    - Autoplays animation inline
    - Handles loading states and errors
+7. **Quiz Generation**:
+   - User can click "Generate Quiz" on any AI message
+   - The backend creates a quiz based on the explanation
+   - The frontend displays an interactive quiz with scoring, hints, and explanations
 
 ## 🛠️ Technologies Used
 

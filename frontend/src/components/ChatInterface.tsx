@@ -8,11 +8,15 @@ import type { ChatMessage } from '../types';
 import { apiService } from '../services/api';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
+import InteractiveQuiz from './InteractiveQuiz';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quizData, setQuizData] = useState<any>(null);
+  // Track quiz loading state per message ID
+  const [isQuizLoading, setIsQuizLoading] = useState<{ [id: string]: boolean }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -34,11 +38,12 @@ const ChatInterface: React.FC = () => {
 I can help you understand concepts with text explanations and animated visualizations using Manim.
 
 You can:
-• Ask questions with text
-• Upload images for analysis
-• Combine both text and images
+• 💬 Ask questions with text
+• 🖼️ Upload images for analysis
+• 🔀 Combine both text and images
+• 📚 Generate practice quizzes to test your understanding
 
-Try asking me something like "Explain how a binary search tree works" or upload an image of a mathematical concept!`,
+Try asking me something like "Explain how a binary search tree works" or upload an image of a mathematical concept. Afterward, click “Generate Quiz” to practice with questions!`,
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
@@ -46,6 +51,10 @@ Try asking me something like "Explain how a binary search tree works" or upload 
 
   const handleSendMessage = async (text: string, file?: File) => {
     if (!text.trim() && !file) return;
+
+    // Clear previous quiz when asking new questions
+  setQuizData(null);
+  setIsQuizLoading({});
 
     // Generate a unique ID for this message
     const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
@@ -178,7 +187,14 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble 
+            key={message.id} 
+            message={message} 
+            setQuizData={setQuizData}
+            quizData={quizData}
+            setIsQuizLoading={setIsQuizLoading}
+            isQuizLoading={!!isQuizLoading[message.id]}
+          />
         ))}
         
         {/* Loading indicator */}
@@ -213,6 +229,17 @@ Try asking me something like "Explain how a binary search tree works" or upload 
               <span className="text-sm text-red-800">{error}</span>
             </div>
           </div>
+        )}
+
+        {/* Interactive Quiz Display */}
+        {quizData && (
+          <InteractiveQuiz 
+            questions={quizData.questions} 
+            onClose={() => {
+              setQuizData(null);
+              setIsQuizLoading({});
+            }}
+          />
         )}
 
         {/* Scroll anchor */}

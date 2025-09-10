@@ -16,6 +16,10 @@ class Settings:
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-1-20250805")
     
+    # Google GenAI API Configuration
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    
     # Server Configuration
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
@@ -42,6 +46,9 @@ class Settings:
         """Validate that required configuration is present"""
         if not cls.ANTHROPIC_API_KEY:
             raise ValueError("ANTHROPIC_API_KEY is required")
+        if not cls.GEMINI_API_KEY:
+            # print("Warning: GEMINI_API_KEY is not set. Some features may not work.")
+            raise ValueError("GEMINI_API_KEY is required")
         return True
 
 
