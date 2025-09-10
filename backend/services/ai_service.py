@@ -20,8 +20,8 @@ class AIService:
         self.claude_api_key = settings.ANTHROPIC_API_KEY
         self.claude_model = settings.ANTHROPIC_MODEL
         
-        self.gemini_api_key = "AIzaSyDKnvDY7zazRzRqqmK_9w1YSq4v2nkqW1o"
-        self.gemini_model = "gemini-2.5-flash"
+        self.gemini_api_key =  settings.GEMINI_API_KEY
+        self.gemini_model = settings.GEMINI_MODEL
 
         if not self.claude_api_key:
             raise ValueError("ANTHROPIC_API_KEY is required")
