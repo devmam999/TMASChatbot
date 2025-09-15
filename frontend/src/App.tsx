@@ -1,9 +1,12 @@
 import ChatInterface from './components/ChatInterface';
+import AuthGate from './components/AuthGate';
 
 function App() {
   return (
     <div className="h-screen">
-      <ChatInterface />
+      <AuthGate>
+        <ChatInterface />
+      </AuthGate>
     </div>
   );
 }

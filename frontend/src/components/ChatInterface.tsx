@@ -8,16 +8,23 @@ import type { ChatMessage } from '../types';
 import { apiService } from '../services/api';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
-import InteractiveQuiz from './InteractiveQuiz';
+import InteractiveQuiz, { type QuizQuestion } from './InteractiveQuiz';
+import AchievementsPanel, { AchievementsDialog } from './AchievementsPanel';
+import { supabase } from '../services/supabaseClient';
+import { incrementQuizzesCompleted, awardBadge, getAchievements } from '../services/achievements';
+import { createSession, listSessions, loadMessages, saveMessage, type ChatSession } from '../services/history';
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quizData, setQuizData] = useState<any>(null);
+  const [quizData, setQuizData] = useState<{ questions: QuizQuestion[] } | null>(null);
   // Track quiz loading state per message ID
   const [isQuizLoading, setIsQuizLoading] = useState<{ [id: string]: boolean }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -30,7 +37,7 @@ const ChatInterface: React.FC = () => {
 
   // Add welcome message
   useEffect(() => {
-    const welcomeMessage: ChatMessage = {
+  const welcomeMessage: ChatMessage = {
       id: 'welcome',
       type: 'ai',
               content: `👋 Welcome to the TMAS Chatbot!
@@ -47,6 +54,10 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
+    // Load sessions list
+    (async () => {
+      try { setSessions(await listSessions()); } catch (e) { console.debug('List sessions failed', e); }
+    })();
   }, []);
 
   const handleSendMessage = async (text: string, file?: File) => {
@@ -68,11 +79,23 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     };
 
     setMessages(prev => [...prev, userMessage]);
+    // Ensure we have a session
+    let sessionId = activeSessionId;
+    if (!sessionId) {
+      sessionId = await createSession(text.slice(0, 60));
+      setActiveSessionId(sessionId);
+      try { setSessions(await listSessions()); } catch (e) { console.debug('Refresh sessions failed', e); }
+    }
+    // Persist user message
+    try { await saveMessage(sessionId, 'user', userMessage.content); } catch (e) { console.debug('Save user msg failed', e); }
     setIsLoading(true);
     setError(null);
 
-    try {
-      let request: any = {};
+  // Will hold the latest streamed text and request id across try/finally
+  let streamedText = '';
+  let requestId: string | null = null;
+  try {
+  const request: { text?: string; image_base64?: string } = {};
       if (text.trim()) request.text = text.trim();
       if (file) {
         const base64 = await apiService.fileToBase64(file);
@@ -81,7 +104,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
 
       // Create a single AI message that will be updated
       const aiMessageId = uniqueId + '-ai';
-      setMessages(prev => [
+  setMessages(prev => [
         ...prev,
         {
           id: aiMessageId,
@@ -92,29 +115,27 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       ]);
 
       // Stream the explanation text
-      let streamedText = '';
-      let requestId: string | null = null;
-      await apiService.streamChatText(request, (chunk) => {
-        streamedText = chunk;
+  await apiService.streamChatText(request, (chunk) => {
+  streamedText = chunk;
         // Extract request ID if present
-        const match = chunk.match(/\[REQUEST_ID:([a-f0-9\-]+)\]/i);
-        if (match) requestId = match[1];
+  const match = chunk.match(/\[REQUEST_ID:([a-f0-9-]+)\]/i);
+  if (match) requestId = match[1];
         
         // Update the AI message with the current text (without request ID)
-        const displayText = chunk.replace(/\[REQUEST_ID:[a-f0-9\-]+\]/i, '').trim();
-        setMessages(prev => prev.map(m => 
+  const displayText = chunk.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim();
+  setMessages(prev => prev.map(m => 
           m.id === aiMessageId 
             ? { ...m, content: displayText }
             : m
-        ));
+  ));
       });
 
       // If there is a requestId, update the same message with animation
-      if (requestId) {
+  if (requestId) {
         // Update the message to show "Generating animation..."
         setMessages(prev => prev.map(m => 
           m.id === aiMessageId 
-            ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9\-]+\]/i, '').trim() + '\n\nGenerating animation...' }
+            ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() + '\n\nGenerating animation...' }
             : m
         ));
 
@@ -126,7 +147,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
               m.id === aiMessageId 
                 ? { 
                     ...m, 
-                    content: streamedText.replace(/\[REQUEST_ID:[a-f0-9\-]+\]/i, '').trim(),
+                    content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim(),
                     animation_base64: videoBase64 
                   }
                 : m
@@ -135,7 +156,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
             // Remove the "Generating animation..." text if no video
             setMessages(prev => prev.map(m => 
               m.id === aiMessageId 
-                ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9\-]+\]/i, '').trim() }
+                ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() }
                 : m
             ));
           }
@@ -144,7 +165,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
           // Remove the "Generating animation..." text on error
           setMessages(prev => prev.map(m => 
             m.id === aiMessageId 
-              ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9\-]+\]/i, '').trim() }
+              ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() }
               : m
           ));
         }
@@ -159,12 +180,46 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       ));
     } finally {
       setIsLoading(false);
+      // Persist latest AI message using the aiMessageId we created
+      const finalContent = streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim();
+      if (sessionId) {
+        try { await saveMessage(sessionId, 'ai', finalContent); } catch (e) { console.debug('Save ai msg failed', e); }
+      }
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar: sessions */}
+      <div className="w-64 border-r border-gray-200 bg-white hidden md:flex md:flex-col">
+        <div className="p-4 border-b">
+          <div className="text-sm font-semibold">Chats</div>
+          <button
+            className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded"
+            onClick={async ()=>{
+              const id = await createSession('New chat');
+              setActiveSessionId(id);
+              setMessages([]);
+              try { setSessions(await listSessions()); } catch (e) { console.debug('Refresh sessions failed', e); }
+            }}
+          >New Chat</button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {sessions.map(s => (
+            <button key={s.id} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${activeSessionId===s.id?'bg-gray-100':''}`}
+              onClick={async ()=>{
+                setActiveSessionId(s.id);
+                const rows = await loadMessages(s.id);
+                setMessages(rows.map(r=>({ id: r.id, type: r.role, content: r.content, timestamp: new Date(r.created_at) })));
+              }}
+            >{s.title ?? 'Untitled'}
+              <div className="text-[10px] text-gray-500">{new Date(s.created_at).toLocaleString()}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Main column */}
+      <div className="flex-1 flex flex-col">
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
@@ -175,7 +230,10 @@ Try asking me something like "Explain how a binary search tree works" or upload 
               AI-powered explanations with Manim animations
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
+            <AchievementsPanel />
+            <button onClick={()=>setAchievementsOpen(true)} className="text-xs bg-purple-600 text-white px-3 py-1 rounded">Achievements</button>
+            <button onClick={()=>supabase.auth.signOut()} className="text-xs text-gray-600 hover:text-gray-900">Sign out</button>
             <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
             <span className="text-xs text-gray-500">
               {isLoading ? 'Processing...' : 'Ready'}
@@ -184,16 +242,16 @@ Try asking me something like "Explain how a binary search tree works" or upload 
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+  {/* Messages Area */}
+  <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <MessageBubble 
             key={message.id} 
             message={message} 
             setQuizData={setQuizData}
-            quizData={quizData}
             setIsQuizLoading={setIsQuizLoading}
             isQuizLoading={!!isQuizLoading[message.id]}
+            sessionId={activeSessionId}
           />
         ))}
         
@@ -239,6 +297,22 @@ Try asking me something like "Explain how a binary search tree works" or upload 
               setQuizData(null);
               setIsQuizLoading({});
             }}
+            onComplete={async (summary) => {
+              try {
+                await incrementQuizzesCompleted(summary);
+                // Re-fetch to get new count, then award badges
+                const ach = await getAchievements();
+                const count = ach?.quizzes_completed ?? 0;
+                if (count === 1) {
+                  try { await awardBadge('first_quiz_completed'); } catch (e) { console.debug('award first completed failed', e); }
+                }
+                if (count >= 5) { try { await awardBadge('five_quizzes_completed'); } catch (e) { console.debug('award 5 failed', e); } }
+                if (count >= 10) { try { await awardBadge('ten_quizzes_completed'); } catch (e) { console.debug('award 10 failed', e); } }
+                if (count >= 50) { try { await awardBadge('fifty_quizzes_completed'); } catch (e) { console.debug('award 50 failed', e); } }
+              } catch (e) {
+                console.error('Failed to record achievement', e);
+              }
+            }}
           />
         )}
 
@@ -247,11 +321,13 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       </div>
 
       {/* Input Area */}
-      <ChatInput
+  <ChatInput
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         disabled={isLoading}
       />
+  <AchievementsDialog open={achievementsOpen} onClose={()=>setAchievementsOpen(false)} />
+  </div>
     </div>
   );
 };

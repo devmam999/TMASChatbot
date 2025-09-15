@@ -3,10 +3,19 @@ Configuration utilities for loading environment variables
 """
 import os
 from typing import List
+import re
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+
+def _parse_int_env(name: str, default: int) -> int:
+    """Parse integer envs robustly, ignoring inline comments and non-digits."""
+    raw = os.getenv(name, str(default))
+    # Keep only leading digits
+    m = re.match(r"\s*(\d+)", raw)
+    return int(m.group(1)) if m else int(default)
 
 
 class Settings:
@@ -26,10 +35,13 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
     
     # CORS Configuration
-    ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,https://tmas-internship.vercel.app").split(",")
+    ALLOWED_ORIGINS: List[str] = [o.strip() for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:5173,http://localhost:5174,https://tmas-internship.vercel.app",
+    ).split(",") if o.strip()]
     
     # File Upload Configuration
-    MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
+    MAX_FILE_SIZE: int = _parse_int_env("MAX_FILE_SIZE", 10485760)  # 10MB
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     MEDIA_DIR: str = os.getenv("MEDIA_DIR", "./media")
     

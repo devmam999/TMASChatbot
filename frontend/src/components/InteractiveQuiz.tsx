@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface QuizQuestion {
+export interface QuizQuestion {
   question: string;
   options: { [key: string]: string };
   correctAnswer: string;
@@ -11,9 +11,10 @@ interface QuizQuestion {
 interface InteractiveQuizProps {
   questions: QuizQuestion[];
   onClose: () => void;
+  onComplete?: (summary: { correct: number; total: number; percentage: number }) => void;
 }
 
-const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onClose }) => {
+const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onClose, onComplete }) => {
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [submitted, setSubmitted] = useState<{ [key: number]: boolean }>({});
   const [showHints, setShowHints] = useState<{ [key: number]: boolean }>({});
@@ -68,6 +69,16 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onClose })
 
   const { correct, total } = getScore();
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+  // When all questions submitted, call onComplete once
+  const allSubmitted = total === questions.length && questions.length > 0;
+  const hasCalledRef = React.useRef(false);
+  React.useEffect(() => {
+    if (allSubmitted && !hasCalledRef.current && onComplete) {
+      hasCalledRef.current = true;
+      onComplete({ correct, total, percentage });
+    }
+  }, [allSubmitted, onComplete, correct, total, percentage]);
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
@@ -237,7 +248,7 @@ const InteractiveQuiz: React.FC<InteractiveQuizProps> = ({ questions, onClose })
       </div>
 
       {/* Final Score Display */}
-      {total > 0 && total === questions.length && (
+  {total > 0 && total === questions.length && (
         <div className="mt-6 p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white text-center">
           <h4 className="text-xl font-semibold mb-2">Quiz Complete! 🎉</h4>
           <p className="text-lg">

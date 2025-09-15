@@ -6,15 +6,19 @@
 import React from 'react';
 import type { ChatMessage } from '../types';
 import VideoPlayer from './VideoPlayer';
+import { awardBadge } from '../services/achievements';
+import { saveMessage } from '../services/history';
+import type { QuizQuestion } from './InteractiveQuiz';
 
 interface MessageBubbleProps {
   message: ChatMessage;
-  setQuizData: React.Dispatch<React.SetStateAction<any>>;
+  setQuizData: React.Dispatch<React.SetStateAction<{ questions: QuizQuestion[] } | null>>;
   setIsQuizLoading: React.Dispatch<React.SetStateAction<{ [id: string]: boolean }>>;
   isQuizLoading: boolean;
+  sessionId?: string | null;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, setQuizData, setIsQuizLoading, isQuizLoading }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, setQuizData, setIsQuizLoading, isQuizLoading, sessionId }) => {
   const isUser = message.type === 'user';
   const isAI = message.type === 'ai';
 
@@ -22,7 +26,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, setQuizData, set
 
   const handleGenerateQuizClick = async () => {
     try {
-      setIsQuizLoading((prev: any) => ({ ...prev, [message.id]: true }));
+  setIsQuizLoading((prev) => ({ ...prev, [message.id]: true }));
       const response = await fetch(`${backendUrl}/generate-quiz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31,45 +35,50 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, setQuizData, set
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const quiz = await response.json();
+  const quiz = await response.json();
       console.log('Quiz response from backend:', quiz);
 
-      // Normalize quiz data for InteractiveQuiz
+  // Normalize quiz data for InteractiveQuiz
       const normalizedQuiz = {
         ...quiz,
         questions: Array.isArray(quiz.questions)
-          ? quiz.questions.map((q: any) => {
-            // If options is array, convert to object {A: '...', B: '...', ...}
-            let optionsObj = q.options;
-            if (Array.isArray(q.options)) {
-              optionsObj = {};
-              q.options.forEach((opt: any, idx: number) => {
-                // Use A, B, C, D... as keys
-                const key = String.fromCharCode(65 + idx);
-                optionsObj[key] = opt;
-              });
-            }
-            // If correctAnswer is value, convert to key
-            let correctKey = q.correctAnswer;
-            if (optionsObj && q.correctAnswer && !optionsObj[q.correctAnswer]) {
-              // Try to find key by value
-              correctKey = Object.keys(optionsObj).find(
-                k => optionsObj[k] === q.correctAnswer
-              ) || q.correctAnswer;
-            }
-            return {
-              ...q,
-              options: optionsObj,
-              correctAnswer: correctKey,
-            };
-          })
+          ? quiz.questions.map((q: { options: Record<string, string> | string[]; correctAnswer: string; explanation?: string; hint?: string; question?: string }) => {
+              // Convert options to a consistent map
+              const optionsMap: Record<string, string> = Array.isArray(q.options)
+                ? q.options.reduce((acc: Record<string, string>, opt: string, idx: number) => {
+                    acc[String.fromCharCode(65 + idx)] = opt;
+                    return acc;
+                  }, {})
+                : q.options;
+
+              // Determine correct key
+              let correctKey = q.correctAnswer;
+              if (!(correctKey in optionsMap)) {
+                const found = Object.entries(optionsMap).find(([, v]) => v === q.correctAnswer);
+                if (found) correctKey = found[0];
+              }
+
+              return {
+                question: q.question ?? '',
+                options: optionsMap,
+                correctAnswer: correctKey,
+                explanation: q.explanation ?? '',
+                hint: q.hint ?? '',
+              };
+            })
           : [],
       };
-      setQuizData(normalizedQuiz);
+  setQuizData(normalizedQuiz);
+  // Award first quiz created badge (idempotent on server)
+  try { await awardBadge('first_quiz_created'); } catch (e) { console.debug('awardBadge failed', e); }
+  // Persist an info message so history shows the quiz event
+  if (sessionId) {
+    try { await saveMessage(sessionId, 'ai', `Generated a quiz with ${normalizedQuiz.questions.length} questions.`); } catch (e) { console.debug('save quiz-generated msg failed', e); }
+  }
     } catch (error) {
       console.error('Failed to generate quiz:', error);
     } finally {
-      setIsQuizLoading((prev: any) => ({ ...prev, [message.id]: false }));
+  setIsQuizLoading((prev) => ({ ...prev, [message.id]: false }));
     }
   };
 
