@@ -130,13 +130,8 @@ This creates:
 - `chat_sessions`, `chat_messages` with RLS
 - `user_badges`, `badge_catalog` with RLS and `award_badge(p_user_id, p_badge_key)`
 
-### 5) Enable Realtime for live UI updates
-- Database → Replication → Configure → Add tables to publication:
-   - Required: `public.user_achievements`, `public.user_badges`
-   - Optional (for multi-tab live chat): `public.chat_messages`
-- Save
 
-### 6) Add your frontend envs and run
+### 5) Add your frontend envs and run
 - Ensure `frontend/.env` has `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 - Restart the dev server after editing envs:
 
@@ -145,7 +140,7 @@ cd "frontend"
 $env:NODE_OPTIONS=""; npm run dev
 ```
 
-### 7) Verify
+### 6) Verify
 - Open the app, Sign up / Sign in (top-level gate)
 - Create a new chat, send a message → AI reply persists when switching chats
 - Click “Generate Quiz” on an AI message → complete it
