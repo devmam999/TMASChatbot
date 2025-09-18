@@ -76,7 +76,7 @@ TMASInternship/
 2. Copy `.env.example` to `.env`
 3. Add your `ANTHROPIC_API_KEY` to `.env`
 4. Build the Docker Image: `docker build -t tmas-backend ./backend`
-5. Run the Docker Container: `docker run -p 8000:8000 tmas-backend`
+5. Run the Docker Container: `docker run --env-file .env -p 8000:8000 tmas-backend`
 
 ### Frontend Setup
 1. Navigate to `frontend/`
@@ -161,7 +161,7 @@ If the achievements chip doesn’t change until you re-login, double-check step 
 ```bash
 cd backend
 docker build -t tmas-backend ./backend
-docker run -p 8000:8000 tmas-backend
+docker run --env-file .env -p 8000:8000 tmas-backend
 ```
 
 **Terminal 2 - Frontend:**
