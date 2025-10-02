@@ -4,12 +4,11 @@
  */
 
 // Input types that match backend enum
-export type InputType = 'text_only' | 'image_only' | 'text_and_image';
+export type InputType = 'text_only';
 
 // Chat request - what we send to the backend
 export interface ChatRequest {
-  text?: string;
-  image_base64?: string;
+  text: string;
 }
 
 // Chat response - what we receive from the backend
@@ -39,13 +38,6 @@ export interface ChatMessage {
   animation_base64?: string;
 }
 
-// File upload state
-export interface FileUploadState {
-  file: File | null;
-  preview: string | null;
-  uploading: boolean;
-  error: string | null;
-}
 
 // API service configuration
 export interface ApiConfig {

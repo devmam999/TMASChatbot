@@ -4,7 +4,7 @@ Main FastAPI application for the TMAS Chatbot
 import os
 import time
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -20,7 +20,6 @@ from pydantic import BaseModel
 from models import ChatRequest, ChatResponse, HealthResponse, InputType
 from services.ai_service import AIService
 from services.manim_service import ManimService
-from services.image_service import ImageService
 from utils.config import settings
 
 # Initialize FastAPI app
@@ -57,7 +56,6 @@ app.add_middleware(
 # Initialize services
 ai_service = AIService()
 manim_service = ManimService()
-image_service = ImageService()
 
 # Mount static files for serving media
 os.makedirs(settings.MEDIA_DIR, exist_ok=True)
@@ -73,7 +71,6 @@ async def startup_event():
         print("✅ Configuration validated successfully")
         
         # Ensure directories exist
-        os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
         os.makedirs(settings.MEDIA_DIR, exist_ok=True)
         
         # Clean up any old temporary files
@@ -140,29 +137,10 @@ async def ai_health_check():
 
 @app.post("/chat")
 async def chat_endpoint(
-    text: Optional[str] = Form(None, description="Text input from user"),
-    image: Optional[UploadFile] = File(None, description="Image file upload")
+    text: str = Form(..., description="Text input from user")
 ):
     try:
-        if not text and not image:
-            raise HTTPException(status_code=400, detail="Either text or image must be provided")
-        if text and image:
-            input_type = InputType.TEXT_AND_IMAGE
-        elif text:
-            input_type = InputType.TEXT_ONLY
-        else:
-            input_type = InputType.IMAGE_ONLY
-        image_path = None
-        if image:
-            if not image_service.is_supported_format(image.filename):
-                raise HTTPException(status_code=400, detail="Unsupported image format. Supported: JPG, PNG, BMP, TIFF")
-            image_content = await image.read()
-            image_base64 = f"data:image/{image.content_type};base64,{image_content.hex()}"
-            image_path, extracted_text = await image_service.process_image(image_base64)
-            if text and extracted_text:
-                text = f"{text}\n\nImage content: {extracted_text}"
-            elif extracted_text:
-                text = extracted_text
+        input_type = InputType.TEXT_ONLY
         print("Calling AI service for /chat...")
         start_time = time.time()
         
@@ -181,7 +159,7 @@ async def chat_endpoint(
         
         try:
             explanation, manim_code = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=image_path),
+                ai_service.generate_response(text=text, image_path=None),
                 timeout=300 
             )
             elapsed_time = time.time() - start_time
@@ -212,11 +190,6 @@ async def chat_endpoint(
             except Exception as fallback_error:
                 print(f"Fallback also failed: {str(fallback_error)}")
                 raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         # If Manim code is present, return base64 video
         video_base64 = None
         if manim_code:
@@ -250,8 +223,7 @@ async def chat_endpoint(
 
 @app.post("/chat/stream")
 async def chat_stream_endpoint(
-    text: Optional[str] = Form(None, description="Text input from user"),
-    image: Optional[UploadFile] = File(None, description="Image file upload")
+    text: str = Form(..., description="Text input from user")
 ):
     headers = {
         "Access-Control-Allow-Origin": "https://tmas-internship.vercel.app",
@@ -259,25 +231,7 @@ async def chat_stream_endpoint(
         "Access-Control-Allow-Headers": "*"
     }
     try:
-        if not text and not image:
-            raise HTTPException(status_code=400, detail="Either text or image must be provided")
-        if text and image:
-            input_type = InputType.TEXT_AND_IMAGE
-        elif text:
-            input_type = InputType.TEXT_ONLY
-        else:
-            input_type = InputType.IMAGE_ONLY
-        image_path = None
-        if image:
-            if not image_service.is_supported_format(image.filename):
-                raise HTTPException(status_code=400, detail="Unsupported image format. Supported: JPG, PNG, BMP, TIFF")
-            image_content = await image.read()
-            image_base64 = f"data:image/{image.content_type};base64,{image_content.hex()}"
-            image_path, extracted_text = await image_service.process_image(image_base64)
-            if text and extracted_text:
-                text = f"{text}\n\nImage content: {extracted_text}"
-            elif extracted_text:
-                text = extracted_text
+        input_type = InputType.TEXT_ONLY
         print("Calling AI service for /chat/stream...")
         start_time = time.time()
         
@@ -296,7 +250,7 @@ async def chat_stream_endpoint(
         
         try:
             explanation, manim_code = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=image_path),
+                ai_service.generate_response(text=text, image_path=None),
                 timeout=300  # seconds - increased from 60
             )
             elapsed_time = time.time() - start_time
@@ -339,11 +293,6 @@ async def chat_stream_endpoint(
             except Exception as fallback_error:
                 print(f"Fallback also failed: {str(fallback_error)}")
                 raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         request_id = str(uuid.uuid4())
         print(f"[Main] Generated request_id: {request_id}")
         print(f"[Main] manim_code is None: {manim_code is None}")
@@ -476,45 +425,16 @@ async def chat_json_endpoint(request: ChatRequest):
     Alternative chat endpoint that accepts JSON with base64 image
     
     This endpoint accepts:
-    - text: Optional string
-    - image_base64: Optional base64 encoded image
+    - text: Required string
     """
     try:
-        # Validate input
-        if not request.text and not request.image_base64:
-            raise HTTPException(
-                status_code=400,
-                detail="Either text or image_base64 must be provided"
-            )
-        
-        # Determine input type
-        if request.text and request.image_base64:
-            input_type = InputType.TEXT_AND_IMAGE
-        elif request.text:
-            input_type = InputType.TEXT_ONLY
-        else:
-            input_type = InputType.IMAGE_ONLY
-        
-        # Process image if provided
-        image_path = None
-        if request.image_base64:
-            # Process base64 image
-            image_path, extracted_text = await image_service.process_image(request.image_base64)
-            
-            # Combine text if both provided
-            if request.text and extracted_text:
-                text = f"{request.text}\n\nImage content: {extracted_text}"
-            elif extracted_text:
-                text = extracted_text
-            else:
-                text = request.text
-        else:
-            text = request.text
+        input_type = InputType.TEXT_ONLY
+        text = request.text
         
         # Generate AI response
         explanation, manim_code = await ai_service.generate_response(
             text=text,
-            image_path=image_path
+            image_path=None
         )
         
         # Generate animation if Manim code was provided
@@ -523,13 +443,6 @@ async def chat_json_endpoint(request: ChatRequest):
             video_path = await manim_service.generate_animation(manim_code)
             if video_path:
                 animation_url = manim_service.get_video_url(video_path)
-        
-        # Clean up temporary files
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         
         return ChatResponse(
             success=True,
@@ -583,6 +496,7 @@ async def generate_quiz(request: QuizRequest):
     response = QuizResponse(questions=quiz)
     # print(f"QuizResponse: {response}")
     return response
+
 
 if __name__ == "__main__":
     import uvicorn

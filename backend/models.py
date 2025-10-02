@@ -9,24 +9,20 @@ from enum import Enum
 class InputType(str, Enum):
     """Enum for different input types"""
     TEXT_ONLY = "text_only"
-    IMAGE_ONLY = "image_only"
-    TEXT_AND_IMAGE = "text_and_image"
 
 
 class ChatRequest(BaseModel):
     """
     Request model for chat endpoint
-    Handles text and/or image input
+    Handles text input
     """
-    text: Optional[str] = Field(None, description="Text input from user")
-    image_base64: Optional[str] = Field(None, description="Base64 encoded image")
+    text: str = Field(..., description="Text input from user")
     
     class Config:
         # Example for API documentation
         schema_extra = {
             "example": {
-                "text": "Explain how a binary search tree works",
-                "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
+                "text": "Explain how a binary search tree works"
             }
         }
 
@@ -49,7 +45,7 @@ class ChatResponse(BaseModel):
                 "explanation": "A binary search tree is a hierarchical data structure...",
                 "animation_url": "/media/animations/bst_animation.mp4",
                 "error_message": None,
-                "input_type": "text_and_image"
+                "input_type": "text_only"
             }
         }
 

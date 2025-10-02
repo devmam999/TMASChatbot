@@ -46,11 +46,9 @@ I can help you understand concepts with text explanations and animated visualiza
 
 You can:
 • 💬 Ask questions with text
-• 🖼️ Upload images for analysis
-• 🔀 Combine both text and images
 • 📚 Generate practice quizzes to test your understanding
 
-Try asking me something like "Explain how a binary search tree works" or upload an image of a mathematical concept. Afterward, click “Generate Quiz” to practice with questions!`,
+Try asking me something like "Explain how a binary search tree works". Afterward, click "Generate Quiz" to practice with questions!`,
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
@@ -60,12 +58,12 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     })();
   }, []);
 
-  const handleSendMessage = async (text: string, file?: File) => {
-    if (!text.trim() && !file) return;
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
 
     // Clear previous quiz when asking new questions
-  setQuizData(null);
-  setIsQuizLoading({});
+    setQuizData(null);
+    setIsQuizLoading({});
 
     // Generate a unique ID for this message
     const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
@@ -74,7 +72,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     const userMessage: ChatMessage = {
       id: uniqueId + '-user',
       type: 'user',
-      content: text || 'Image uploaded',
+      content: text,
       timestamp: new Date(),
     };
 
@@ -95,12 +93,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
   let streamedText = '';
   let requestId: string | null = null;
   try {
-  const request: { text?: string; image_base64?: string } = {};
-      if (text.trim()) request.text = text.trim();
-      if (file) {
-        const base64 = await apiService.fileToBase64(file);
-        request.image_base64 = base64;
-      }
+      const request: { text: string } = { text: text.trim() };
 
       // Create a single AI message that will be updated
       const aiMessageId = uniqueId + '-ai';
@@ -321,7 +314,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       </div>
 
       {/* Input Area */}
-  <ChatInput
+      <ChatInput
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
         disabled={isLoading}

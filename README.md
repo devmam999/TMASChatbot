@@ -2,12 +2,10 @@
 
 ## 🎯 Project Overview
 
-This web application allows users to submit text and/or images to get AI-generated explanations with custom Manim animations.
+This web application allows users to submit text to get AI-generated explanations with custom Manim animations.
 
 ### Features
- - ✅ Text-only input
- - ✅ Image-only input (with OCR/VLM processing)
- - ✅ Combined text and image input
+ - ✅ Text input with AI-powered explanations
  - ✅ Interactive quiz generation from AI explanations
  - 🔄 Real-time Manim animation generation
  - 🎬 Inline video playback in chat interface
@@ -35,11 +33,9 @@ TMASInternship/
 │   ├── models.py           # Pydantic models
 │   ├── services/           # Business logic
 │   │   ├── ai_service.py        # Anthropic Claude API integration
-│   │   ├── manim_service.py     # Manim code execution
-│   │   └── image_service.py     # Image processing
+│   │   └── manim_service.py     # Manim code execution
 │   ├── utils/              # Utility functions
-│   │   ├── config.py            # Environment configuration
-│   │   └── file_utils.py        # File handling utilities
+│   │   └── config.py            # Environment configuration
 │   ├── requirements.txt    # Python dependencies
 │   └── .env.example       # Environment variables template
 |   └── Dockerfile         # Docker container containing the FastAPI backend service
@@ -49,7 +45,6 @@ TMASInternship/
 │   │   │   ├── ChatInterface.tsx    # Main chat interface
 │   │   │   ├── ChatInput.tsx        # Input component
 │   │   │   ├── MessageBubble.tsx    # Message display
-│   │   │   ├── FileUpload.tsx       # File upload component
 │   │   │   ├── InteractiveQuiz.tsx  # Interactive quiz component
 │   │   │   └── VideoPlayer.tsx      # Video player component
 │   │   ├── services/       # API services
@@ -97,8 +92,8 @@ This app uses Supabase for authentication, achievements (badges + quiz counters)
 ### 2) Get API URL and Anon key (frontend env)
 - In your Supabase project: Settings → API
 - Copy these values:
-   - Project URL → use as `VITE_SUPABASE_URL`
-   - `anon` public key → use as `VITE_SUPABASE_ANON_KEY`
+  - Project URL → use as `VITE_SUPABASE_URL`
+  - `anon` public key → use as `VITE_SUPABASE_ANON_KEY`
 - Update `frontend/.env` with the three variables:
 
 ```
@@ -118,12 +113,12 @@ Notes:
 ### 4) Create tables, RLS, and RPCs (run SQL in dashboard)
 - Database → SQL Editor → New query
 - Run the following in order:
-   1. Enable gen_random_uuid (usually enabled by default):
-       ```sql
-       create extension if not exists pgcrypto;
-       ```
-   2. Achievements table + RPC: open `docs/supabase.sql` and paste contents, then Run
-   3. Chat + Badges: open `docs/supabase_chat_and_badges.sql` and paste contents, then Run
+  1. Enable gen_random_uuid (usually enabled by default):
+      ```sql
+      create extension if not exists pgcrypto;
+      ```
+  2. Achievements table + RPC: open `docs/supabase.sql` and paste contents, then Run
+  3. Chat + Badges: open `docs/supabase_chat_and_badges.sql` and paste contents, then Run
 
 This creates:
 - `user_achievements` with RLS and `increment_quizzes_completed(p_user_id, ...)`
@@ -143,10 +138,10 @@ $env:NODE_OPTIONS=""; npm run dev
 ### 6) Verify
 - Open the app, Sign up / Sign in (top-level gate)
 - Create a new chat, send a message → AI reply persists when switching chats
-- Click “Generate Quiz” on an AI message → complete it
-- Achievements chip should increment; click “Achievements” to see earned badges
+- Click "Generate Quiz" on an AI message → complete it
+- Achievements chip should increment; click "Achievements" to see earned badges
 
-If the achievements chip doesn’t change until you re-login, double-check step 5 (Realtime enabled) and that the correct project URL/key are in `frontend/.env`.
+If the achievements chip doesn't change until you re-login, double-check step 5 (Realtime enabled) and that the correct project URL/key are in `frontend/.env`.
 
 ## 🧪 Testing the Application
 
@@ -166,32 +161,19 @@ npm install
 npm run dev
 ```
 
-### 2. Test Different Input Types
+### 2. Test Text Input
 
-#### Text-Only Test
 1. Open http://localhost:5173 in your browser
 2. Type: "Explain how a binary search tree works"
 3. Click Send
 4. Wait for AI response with explanation and animation
 
-#### Image-Only Test
-1. Click the image upload button (📷 icon)
-2. Upload an image of a mathematical concept
-3. Click Send
-4. Wait for AI to analyze the image and generate explanation + animation
-
-#### Combined Test
-1. Type: "Explain this graph"
-2. Upload an image of a graph/chart
-3. Click Send
-4. Wait for AI to process both text and image
-
 ### 3. Verify Features
 - ✅ Text input with auto-resize
-- ✅ Image upload with drag & drop
 - ✅ Loading states and error handling
 - ✅ Auto-scrolling chat
 - ✅ Inline video playback
+- ✅ Interactive quiz generation
 - ✅ Responsive design
 
 ## 🔐 Environment Variables
@@ -202,6 +184,10 @@ npm run dev
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ANTHROPIC_MODEL=claude-opus-4-1-20250805
 
+# Google GenAI API Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
+
 # Server Configuration
 HOST=0.0.0.0
 PORT=8000
@@ -210,9 +196,7 @@ DEBUG=True
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
-# File Upload Configuration
-MAX_FILE_SIZE=10485760  # 10MB
-UPLOAD_DIR=./uploads
+# Media Configuration
 MEDIA_DIR=./media
 
 # Manim Configuration
@@ -236,14 +220,11 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 
 ## 🎬 How It Works
 
-1. **User Input**: User submits text and/or image through the chat interface
+1. **User Input**: User submits text through the chat interface
 2. **Frontend Processing**: 
-   - Validates input (text length, image size/type)
-   - Converts image to base64 if present
+   - Validates input (text length)
    - Sends FormData to backend
 3. **Backend Processing**: 
-   - Processes image with OCR/VLM if present
-   - Combines text and image analysis
    - Sends prompt to Anthropic Claude or Gemini
    - Receives explanation + Manim Python code
 4. **Animation Generation**: 
@@ -262,11 +243,10 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 
 ## 🛠️ Technologies Used
 
-- **AI**: Anthropic Claude
-- **Animation**: Manim library (v0.18.0+)
+- **AI**: Anthropic Claude and Google Gemini
+- **Animation**: Manim library (v0.19.0+)
 - **Backend**: FastAPI, Python, Uvicorn, Docker
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **Image Processing**: Pillow, OpenCV, pytesseract
 - **Deployment**: Render (backend), Vercel (frontend)
 
 ## 🐛 Troubleshooting
@@ -275,11 +255,11 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 
 1. **Backend won't start**: Check if port 8000 is available
 2. **Frontend can't connect**: Verify `VITE_BACKEND_URL` in `.env`
-3. **API errors**: Ensure `ANTHROPIC_API_KEY` is valid
+3. **API errors**: Ensure `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are valid
 4. **Manim errors**: Check Python dependencies and Manim installation
 5. **CORS errors**: Verify `ALLOWED_ORIGINS` includes frontend URL
 
-6. **Achievements don’t update live**:
+6. **Achievements don't update live**:
  - Ensure Realtime is enabled for `user_achievements` and `user_badges`
  - Confirm `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct and the user is authenticated
 
@@ -290,4 +270,4 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ### Debug Mode
 - Backend: Set `DEBUG=True` in `.env`
 - Frontend: Check browser console for errors
-- Check network tab for API request/response details 
+- Check network tab for API request/response details

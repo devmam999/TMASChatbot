@@ -31,16 +31,7 @@ class ApiService {
   async sendChatRequest(request: ChatRequest): Promise<ChatResponse | VideoChatResponse> {
     try {
       const formData = new FormData();
-      // Add text if provided
-      if (request.text) {
-        formData.append('text', request.text);
-      }
-      // Add image if provided
-      if (request.image_base64) {
-        const base64Response = await fetch(request.image_base64);
-        const blob = await base64Response.blob();
-        formData.append('image', blob, 'image.png');
-      }
+      formData.append('text', request.text);
       const response = await fetch(`${this.config.baseUrl}/chat`, {
         method: 'POST',
         body: formData,
@@ -154,16 +145,12 @@ export async function streamChatText(
   onText: (text: string) => void
 ) {
   const formData = new FormData();
-  if (request.text) formData.append('text', request.text);
-  if (request.image_base64) {
-    const base64Response = await fetch(request.image_base64);
-    const blob = await base64Response.blob();
-    formData.append('image', blob, 'image.png');
-  }
+  formData.append('text', request.text);
   const response = await fetch(`${defaultConfig.baseUrl}/chat/stream`, {
     method: 'POST',
     body: formData,
   });
+  console.log('[streamChatText] response meta status:', response.status, 'ok:', response.ok, 'content-type:', response.headers.get('Content-Type'));
   
   // Check if response is ok
   if (!response.ok) {
@@ -186,11 +173,13 @@ export async function streamChatText(
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let result = '';
+  let chunks = 0;
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value);
     result += chunk;
+    chunks++;
     onText(result); // Update UI with new text
   }
 }
@@ -228,12 +217,11 @@ export const apiService = {
   },
 
   streamChatText: async (
-    data: { text?: string; image_base64?: string },
+    data: { text: string },
     onChunk: (chunk: string) => void
   ) => {
     const formData = new FormData();
-    if (data.text) formData.append('text', data.text);
-    if (data.image_base64) formData.append('image', data.image_base64);
+    formData.append('text', data.text);
 
     const response = await fetch(`${defaultConfig.baseUrl}/chat/stream`, {
       method: 'POST',
@@ -264,12 +252,14 @@ export const apiService = {
     const decoder = new TextDecoder();
     let done = false;
     let text = '';
+    let chunks = 0;
     while (!done) {
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
       if (value) {
         const chunk = decoder.decode(value);
         text += chunk;
+        chunks++;
         onChunk(text);
       }
     }
@@ -299,5 +289,6 @@ export const apiService = {
     }
     return null;
   },
+
 };
 export default ApiService; 
