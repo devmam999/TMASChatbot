@@ -32,8 +32,14 @@ TMASInternship/
 │   ├── main.py             # FastAPI application
 │   ├── models.py           # Pydantic models
 │   ├── services/           # Business logic
+<<<<<<< HEAD
 │   │   ├── ai_service.py        # Anthropic Claude API integration
 │   │   └── manim_service.py     # Manim code execution
+=======
+│   │   ├── ai_service.py        # Gemini API integration
+│   │   ├── manim_service.py     # Manim code execution
+│   │   └── image_service.py     # Image processing
+>>>>>>> 5f053e3d03c9236e7f31767465ee8a08eb6efc69
 │   ├── utils/              # Utility functions
 │   │   └── config.py            # Environment configuration
 │   ├── requirements.txt    # Python dependencies
