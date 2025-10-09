@@ -40,9 +40,7 @@ class Settings:
         "http://localhost:3000,http://localhost:5173,http://localhost:5174,https://tmas-internship.vercel.app",
     ).split(",") if o.strip()]
     
-    # File Upload Configuration
-    MAX_FILE_SIZE: int = _parse_int_env("MAX_FILE_SIZE", 10485760)  # 10MB
-    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
+    # Media Configuration
     MEDIA_DIR: str = os.getenv("MEDIA_DIR", "./media")
     
     # Manim Configuration
