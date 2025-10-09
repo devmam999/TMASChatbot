@@ -683,7 +683,8 @@ class ConceptAnimation(Scene):
     async def test_connection(self) -> bool:
         """Test the API connection"""
         try:
-            messages = [
+            # Use the same format as the working API calls
+            anthropic_messages = [
                 {"role": "user", "content": "Hello, this is a test message."}
             ]
             
@@ -692,16 +693,17 @@ class ConceptAnimation(Scene):
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "Authorization": f"Bearer {self.claude_api_key}",
-                        "Content-Type": "application/json",
+                        "x-api-key": self.claude_api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
                         "HTTP-Referer": "http://localhost:5173",
-                                                    "X-Title": "TMAS Chatbot"
+                        "X-Title": "TMAS Chatbot"
                     },
                     json={
                         "model": self.claude_model,
-                        "messages": messages,
                         "max_tokens": 5,  # Very short response for test
-                        "temperature": 0.7
+                        "temperature": 0.7,
+                        "messages": anthropic_messages
                     }
                 )
                 
@@ -710,7 +712,7 @@ class ConceptAnimation(Scene):
                     return False
                 
                 result = response.json()
-                return "choices" in result and len(result["choices"]) > 0
+                return "content" in result and len(result["content"]) > 0
                 
         except httpx.TimeoutException:
             print("Connection test timed out")
