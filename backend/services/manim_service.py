@@ -551,17 +551,28 @@ class {class_name}(Scene):
     def _find_generated_video(self, class_name: str) -> Optional[str]:
         """Find the generated video file in the output directory"""
         try:
-            # Look for MP4 files in the output directory
-            for file in os.listdir(self.output_dir):
-                if file.endswith('.mp4') and class_name.lower() in file.lower():
-                    return os.path.join(self.output_dir, file)
+            # Manim creates nested directories like videos/filename/quality/ClassName.mp4
+            videos_dir = os.path.join(self.output_dir, "videos")
+            if not os.path.exists(videos_dir):
+                return None
+            
+            # Look for MP4 files recursively in the videos directory
+            for root, dirs, files in os.walk(videos_dir):
+                for file in files:
+                    if file.endswith('.mp4') and class_name.lower() in file.lower():
+                        return os.path.join(root, file)
             
             # If not found by class name, return the most recent MP4
-            mp4_files = [f for f in os.listdir(self.output_dir) if f.endswith('.mp4')]
+            mp4_files = []
+            for root, dirs, files in os.walk(videos_dir):
+                for file in files:
+                    if file.endswith('.mp4'):
+                        mp4_files.append(os.path.join(root, file))
+            
             if mp4_files:
                 # Sort by modification time (most recent first)
-                mp4_files.sort(key=lambda x: os.path.getmtime(os.path.join(self.output_dir, x)), reverse=True)
-                return os.path.join(self.output_dir, mp4_files[0])
+                mp4_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+                return mp4_files[0]
             
             return None
             

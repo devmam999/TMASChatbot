@@ -18,7 +18,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (!session) return <AuthForm />;
-
+  
   return <>{children}</>;
 }
 

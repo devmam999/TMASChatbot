@@ -43,4 +43,16 @@ export interface ChatMessage {
 export interface ApiConfig {
   baseUrl: string;
   timeout: number;
+}
+
+// Animation generation types
+export interface AnimationRequest {
+  explanation: string;
+}
+
+export interface AnimationResponse {
+  success: boolean;
+  manim_code?: string;
+  animation_base64?: string;
+  error_message?: string;
 } 

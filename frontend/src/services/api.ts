@@ -3,7 +3,7 @@
  * Handles chat requests, file uploads, and health checks
  */
 
-import type { ChatRequest, ChatResponse, HealthResponse, ApiConfig } from '../types';
+import type { ChatRequest, ChatResponse, HealthResponse, ApiConfig, AnimationResponse } from '../types';
 
 // Default API configuration
 const defaultConfig: ApiConfig = {
@@ -138,6 +138,30 @@ class ApiService {
   getMediaUrl(filename: string): string {
     return `${this.config.baseUrl}/media/${filename}`;
   }
+
+  /**
+   * Generate animation from explanation text
+   */
+  async generateAnimation(explanation: string): Promise<AnimationResponse> {
+    try {
+      const response = await fetch(`${this.config.baseUrl}/generate-animation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ explanation }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Animation generation failed:', error);
+      throw new Error(`Failed to generate animation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }
 
 export async function streamChatText(
@@ -181,22 +205,6 @@ export async function streamChatText(
     result += chunk;
     chunks++;
     onText(result); // Update UI with new text
-  }
-}
-
-export async function pollForVideo(requestId: string, onVideo: (videoUrl: string) => void) {
-  const url = `${defaultConfig.baseUrl}/chat/video/${requestId}`;
-  let attempts = 0;
-  while (attempts < 60) { // Try for up to 60 seconds
-    const response = await fetch(url);
-    if (response.status === 200) {
-      const videoBlob = await response.blob();
-      const videoUrl = URL.createObjectURL(videoBlob);
-      onVideo(videoUrl);
-      break;
-    }
-    await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds
-    attempts++;
   }
 }
 

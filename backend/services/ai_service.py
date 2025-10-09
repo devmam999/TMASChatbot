@@ -33,45 +33,30 @@ class AIService:
         self, 
         text: Optional[str] = None, 
         image_path: Optional[str] = None
-    ) -> Tuple[str, Optional[str]]:
+    ) -> str:  # Changed return type from Tuple[str, Optional[str]] to just str
         """
-        Generate AI response with explanation (Gemini) and Manim code (Claude).
-        Returns explanation even if Manim code generation fails.
+        Generate AI response with explanation only (Gemini).
+        Animation generation is now handled separately.
         
         Args:
             text: User's text input
             image_path: Path to uploaded image file
             
         Returns:
-            Tuple of (explanation, manim_code)
+            explanation: Just the explanation text
         """
         if not text and not image_path:
             raise ValueError("No input provided for AI request")
 
         try:
-            # 1. Build Gemini prompt
+            # Build Gemini prompt for explanation only
             gemini_prompt = self._build_explanation_prompt(text, image_path)
-            # 2. Get explanation from Gemini
+            # Get explanation from Gemini
             explanation = await self._get_gemini_explanation(gemini_prompt, image_path)
+            return explanation  # Return only explanation, no manim code
 
         except Exception as e:
             raise Exception(f"Failed to generate explanation: {str(e)}")
-
-        manim_code = None
-        try:
-            # 3. Build Claude prompt using Gemini explanation
-            claude_prompt = self._build_manim_prompt(text, explanation)
-            # 4. Prepare messages for Claude
-            messages = self._prepare_messages(claude_prompt, None)
-            # 5. Get Manim code from Claude
-            response = await self._make_api_request(messages)
-            _, manim_code = self._parse_response(response)
-
-        except Exception as e:
-            # Log the error, but still return the explanation
-            print(f"Claude API failed: {str(e)}")
-
-        return explanation, manim_code
     
     # async def generate_simple_response(self, prompt: str) -> Tuple[str, str]:
     #     """
@@ -164,6 +149,38 @@ class AIService:
                 
 #         except Exception as e:
 #             raise Exception(f"Failed to generate simple animation response: {str(e)}")
+    
+    async def generate_animation_code(
+        self, 
+        explanation: str
+    ) -> str:
+        """
+        Generate Manim animation code based on an explanation.
+        This is called separately when user clicks "Generate Animation".
+        
+        Args:
+            explanation: The explanation text to create animation for
+            
+        Returns:
+            manim_code: Python code for Manim animation
+        """
+        try:
+            # Build Claude prompt using the explanation
+            claude_prompt = self._build_manim_prompt(explanation, explanation)
+            # Prepare messages for Claude
+            messages = self._prepare_messages(claude_prompt, None)
+            # Get Manim code from Claude
+            response = await self._make_api_request(messages)
+            _, manim_code = self._parse_response(response)
+            
+            if not manim_code:
+                raise Exception("No animation code could be generated for this explanation")
+                
+            return manim_code
+            
+        except Exception as e:
+            raise Exception(f"Failed to generate animation code: {str(e)}")
+    
     
     async def generate_quiz(self, explanation: str) -> List[Dict[str, Any]]:
         """
@@ -666,7 +683,8 @@ class ConceptAnimation(Scene):
     async def test_connection(self) -> bool:
         """Test the API connection"""
         try:
-            messages = [
+            # Use the same format as the working API calls
+            anthropic_messages = [
                 {"role": "user", "content": "Hello, this is a test message."}
             ]
             
@@ -675,16 +693,17 @@ class ConceptAnimation(Scene):
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "Authorization": f"Bearer {self.claude_api_key}",
-                        "Content-Type": "application/json",
+                        "x-api-key": self.claude_api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
                         "HTTP-Referer": "http://localhost:5173",
-                                                    "X-Title": "TMAS Chatbot"
+                        "X-Title": "TMAS Chatbot"
                     },
                     json={
                         "model": self.claude_model,
-                        "messages": messages,
                         "max_tokens": 5,  # Very short response for test
-                        "temperature": 0.7
+                        "temperature": 0.7,
+                        "messages": anthropic_messages
                     }
                 )
                 
@@ -693,7 +712,7 @@ class ConceptAnimation(Scene):
                     return False
                 
                 result = response.json()
-                return "choices" in result and len(result["choices"]) > 0
+                return "content" in result and len(result["content"]) > 0
                 
         except httpx.TimeoutException:
             print("Connection test timed out")
