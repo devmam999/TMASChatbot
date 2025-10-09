@@ -3,7 +3,7 @@
  * Handles chat requests, file uploads, and health checks
  */
 
-import type { ChatRequest, ChatResponse, HealthResponse, ApiConfig } from '../types';
+import type { ChatRequest, ChatResponse, HealthResponse, ApiConfig, AnimationResponse } from '../types';
 
 // Default API configuration
 const defaultConfig: ApiConfig = {
@@ -146,6 +146,30 @@ class ApiService {
    */
   getMediaUrl(filename: string): string {
     return `${this.config.baseUrl}/media/${filename}`;
+  }
+
+  /**
+   * Generate animation from explanation text
+   */
+  async generateAnimation(explanation: string): Promise<AnimationResponse> {
+    try {
+      const response = await fetch(`${this.config.baseUrl}/generate-animation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ explanation }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Animation generation failed:', error);
+      throw new Error(`Failed to generate animation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 

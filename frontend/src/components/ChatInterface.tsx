@@ -23,6 +23,8 @@ const ChatInterface: React.FC = () => {
   const [quizData, setQuizData] = useState<{ questions: QuizQuestion[] } | null>(null);
   // Track quiz loading state per message ID
   const [isQuizLoading, setIsQuizLoading] = useState<{ [id: string]: boolean }>({});
+  // Track animation loading state per message ID
+  const [isAnimationLoading, setIsAnimationLoading] = useState<{ [id: string]: boolean }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [achievementsOpen, setAchievementsOpen] = useState(false);
 
@@ -60,14 +62,22 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     })();
   }, []);
 
+  // Handler for when animation is generated
+  const handleAnimationGenerated = (messageId: string, animationBase64: string) => {
+    setMessages(prev => prev.map(message => 
+      message.id === messageId 
+        ? { ...message, animation_base64: animationBase64 }
+        : message
+    ));
+  };
+
   const handleSendMessage = async (text: string, file?: File) => {
     if (!text.trim() && !file) return;
 
     // Clear previous quiz when asking new questions
-  setQuizData(null);
-  setIsQuizLoading({});
-
-    // Generate a unique ID for this message
+    setQuizData(null);
+    setIsQuizLoading({});
+    setIsAnimationLoading({});    // Generate a unique ID for this message
     const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
 
     // Create user message
@@ -251,6 +261,9 @@ Try asking me something like "Explain how a binary search tree works" or upload 
             setQuizData={setQuizData}
             setIsQuizLoading={setIsQuizLoading}
             isQuizLoading={!!isQuizLoading[message.id]}
+            setIsAnimationLoading={setIsAnimationLoading}
+            isAnimationLoading={!!isAnimationLoading[message.id]}
+            onAnimationGenerated={handleAnimationGenerated}
             sessionId={activeSessionId}
           />
         ))}
