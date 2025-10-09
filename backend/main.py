@@ -11,7 +11,6 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from typing import Optional
 import re
 import asyncio
-import uuid
 import types
 from fastapi import Response, APIRouter, Request
 from pydantic import BaseModel
@@ -321,17 +320,12 @@ async def chat_stream_endpoint(
             except Exception as e:
                 print(f"Failed to clean up image file: {e}")
         
-        # Generate request ID for consistency, but no animation will be generated automatically
-        request_id = str(uuid.uuid4())
-        print(f"[Main] Generated request_id: {request_id} (explanation only)")
-        
-        # Stream the explanation text (no automatic animation generation)
+        # Stream the explanation text only (no automatic animation generation)
         async def text_streamer():
             try:
                 for word in explanation.split():
                     yield word + " "
                     await asyncio.sleep(0.03)
-                yield f"\n[REQUEST_ID:{request_id}]\n"
             except Exception as e:
                 # If streaming fails, yield the error message
                 yield f"\nError during streaming: {str(e)}\n"

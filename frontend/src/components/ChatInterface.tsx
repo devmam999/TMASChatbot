@@ -101,9 +101,8 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     setIsLoading(true);
     setError(null);
 
-  // Will hold the latest streamed text and request id across try/finally
+  // Will hold the latest streamed text
   let streamedText = '';
-  let requestId: string | null = null;
   try {
   const request: { text?: string; image_base64?: string } = {};
       if (text.trim()) request.text = text.trim();
@@ -127,59 +126,15 @@ Try asking me something like "Explain how a binary search tree works" or upload 
       // Stream the explanation text
   await apiService.streamChatText(request, (chunk) => {
   streamedText = chunk;
-        // Extract request ID if present
-  const match = chunk.match(/\[REQUEST_ID:([a-f0-9-]+)\]/i);
-  if (match) requestId = match[1];
         
-        // Update the AI message with the current text (without request ID)
-  const displayText = chunk.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim();
+        // Update the AI message with the current text
   setMessages(prev => prev.map(m => 
           m.id === aiMessageId 
-            ? { ...m, content: displayText }
+            ? { ...m, content: chunk.trim() }
             : m
   ));
       });
 
-      // If there is a requestId, update the same message with animation
-  if (requestId) {
-        // Update the message to show "Generating animation..."
-        setMessages(prev => prev.map(m => 
-          m.id === aiMessageId 
-            ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() + '\n\nGenerating animation...' }
-            : m
-        ));
-
-        try {
-          const videoBase64 = await apiService.getVideoBase64(requestId);
-          if (videoBase64) {
-            // Update the same message with the animation
-            setMessages(prev => prev.map(m => 
-              m.id === aiMessageId 
-                ? { 
-                    ...m, 
-                    content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim(),
-                    animation_base64: videoBase64 
-                  }
-                : m
-            ));
-          } else {
-            // Remove the "Generating animation..." text if no video
-            setMessages(prev => prev.map(m => 
-              m.id === aiMessageId 
-                ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() }
-                : m
-            ));
-          }
-        } catch (videoError) {
-          console.error('Error fetching video:', videoError);
-          // Remove the "Generating animation..." text on error
-          setMessages(prev => prev.map(m => 
-            m.id === aiMessageId 
-              ? { ...m, content: streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim() }
-              : m
-          ));
-        }
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       // Update the existing AI message with the error
@@ -191,7 +146,7 @@ Try asking me something like "Explain how a binary search tree works" or upload 
     } finally {
       setIsLoading(false);
       // Persist latest AI message using the aiMessageId we created
-      const finalContent = streamedText.replace(/\[REQUEST_ID:[a-f0-9-]+\]/i, '').trim();
+      const finalContent = streamedText.trim();
       if (sessionId) {
         try { await saveMessage(sessionId, 'ai', finalContent); } catch (e) { console.debug('Save ai msg failed', e); }
       }

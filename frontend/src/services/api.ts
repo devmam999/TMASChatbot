@@ -219,22 +219,6 @@ export async function streamChatText(
   }
 }
 
-export async function pollForVideo(requestId: string, onVideo: (videoUrl: string) => void) {
-  const url = `${defaultConfig.baseUrl}/chat/video/${requestId}`;
-  let attempts = 0;
-  while (attempts < 60) { // Try for up to 60 seconds
-    const response = await fetch(url);
-    if (response.status === 200) {
-      const videoBlob = await response.blob();
-      const videoUrl = URL.createObjectURL(videoBlob);
-      onVideo(videoUrl);
-      break;
-    }
-    await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds
-    attempts++;
-  }
-}
-
 // Export a singleton instance
 export const apiService = {
   fileToBase64: (file: File): Promise<string> => {
@@ -297,31 +281,6 @@ export const apiService = {
         onChunk(text);
       }
     }
-  },
-
-  getVideoBase64: async (requestId: string) => {
-    // Poll until the video is ready
-    for (let i = 0; i < 60; i++) {
-      try {
-        const res = await fetch(`${defaultConfig.baseUrl}/chat/video_base64/${requestId}`);
-        if (res.status === 202) {
-          await new Promise(r => setTimeout(r, 2000));
-          continue;
-        }
-        if (res.status === 404) {
-          console.log('No video will be created for this request');
-          return null;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          return data.video_base64;
-        }
-      } catch (error) {
-        console.error(`Error polling for video (attempt ${i + 1}):`, error);
-      }
-      await new Promise(r => setTimeout(r, 2000));
-    }
-    return null;
   },
 };
 export default ApiService; 
