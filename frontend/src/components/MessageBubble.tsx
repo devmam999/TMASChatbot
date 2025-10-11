@@ -265,7 +265,7 @@ const formatAIGeneratedText = (text: string): string => {
                     className="bg-purple-500 text-white text-xs px-3 py-1 rounded hover:bg-purple-600 transition cursor-pointer"
                     disabled={isAnimationLoading || Boolean(message.animation_base64)}
                   >
-                    {Boolean(message.animation_base64) ? 'Animation Ready' : 'Generate Animation'}
+                    {message.animation_base64 ? 'Animation Ready' : 'Generate Animation'}
                   </button>
                 )}
               </div>

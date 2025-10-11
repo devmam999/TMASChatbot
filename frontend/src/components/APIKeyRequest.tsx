@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function APIKeyRequest({ children }: { children: React.ReactNode }) {
-    const [session, setSession] = useState(null);
+    const [session] = useState(null);
     
     if (!session) return <APIKeyForm />;
     return <>{children}</>;

@@ -197,13 +197,11 @@ export async function streamChatText(
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let result = '';
-  let chunks = 0;
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value);
     result += chunk;
-    chunks++;
     onText(result); // Update UI with new text
   }
 }
@@ -260,14 +258,12 @@ export const apiService = {
     const decoder = new TextDecoder();
     let done = false;
     let text = '';
-    let chunks = 0;
     while (!done) {
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
       if (value) {
         const chunk = decoder.decode(value);
         text += chunk;
-        chunks++;
         onChunk(text);
       }
     }

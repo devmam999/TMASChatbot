@@ -1,6 +1,5 @@
 import ChatInterface from './components/ChatInterface';
 import AuthGate from './components/AuthGate';
-import APIKeyRequest from './components/APIKeyRequest';
 
 function App() {
   return (

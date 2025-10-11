@@ -32,7 +32,7 @@ const SimpleAnimation: React.FC<SimpleAnimationProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Animation variables
-    let startTime = Date.now();
+    const startTime = Date.now();
     let animationId: number;
 
     const animate = () => {
