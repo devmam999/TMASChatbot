@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import type { ChatMessage } from '../types';
 import VideoPlayer from './VideoPlayer';
 import { awardBadge } from '../services/achievements';
@@ -35,8 +36,32 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isUser = message.type === 'user';
   const isAI = message.type === 'ai';
 
+  // You can place this inside the same file above the component,
+// or in a utils file and import it
+const formatAIGeneratedText = (text: string): string => {
+  if (!text) return '';
+
+  const headings = [
+    'Background',
+    'Core Idea',
+    'How It Works',
+    'Real-World Relevance'
+  ];
+
+  const regex = new RegExp(`\\*?\\*?\\s*(${headings.join('|')})\\s*\\*?\\*?`, 'g');
+  return text.replace(regex, '\n\n**$1**\n\n');
+};
+
+
+  // Preprocess AI message content for spacing
+  const formattedContent = isAI
+  ? formatAIGeneratedText(message.content)
+  : message.content;
+
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const apiService = new ApiService();
+
 
   const handleGenerateQuizClick = async () => {
     try {
@@ -143,8 +168,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           : 'bg-white border border-gray-200 text-gray-800'
           }`}>
           {/* Text Content */}
-          <div className={`whitespace-pre-wrap ${isUser ? 'text-white' : 'text-gray-800'}`}>
-            {message.content}
+          <div className={`${isUser ? 'text-white' : 'text-gray-800'}`}>
+            {isUser ? (
+              <div className="whitespace-pre-wrap">{message.content}</div>
+            ) : (
+              <div className="prose prose-sm max-w-full leading-relaxed">
+              <ReactMarkdown 
+                components={{
+                  p: ({ children }) => <p className="mb-4">{children}</p>,
+                  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                }}
+              >
+                {formattedContent}
+              </ReactMarkdown>
+              </div>
+            )}
           </div>
 
           {/* Animation Video */}

@@ -3,6 +3,7 @@ Main FastAPI application for the TMAS Chatbot
 """
 import os
 import time
+import uuid
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -157,10 +158,8 @@ async def chat_endpoint(
                 ai_service._connection_tested = True
         
         try:
-            explanation = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=image_path),
             explanation, manim_code = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=None),
+                ai_service.generate_response(text=text),
                 timeout=300 
             )
             elapsed_time = time.time() - start_time
@@ -171,7 +170,7 @@ async def chat_endpoint(
                 # Fallback: try with a simpler prompt that can still generate animations
                 fallback_prompt = f"Please provide a clear explanation and create a simple animation that specifically demonstrates: {text}"
                 explanation = await asyncio.wait_for(
-                    ai_service.generate_response(text=text, image_path=image_path),
+                    ai_service.generate_response(text=text),
                     timeout=300 
                 )
                 print("Fallback AI service returned for /chat.")
@@ -184,18 +183,13 @@ async def chat_endpoint(
             try:
                 fallback_prompt = f"Please provide a clear explanation and create a simple animation that specifically demonstrates: {text}"
                 explanation = await asyncio.wait_for(
-                    ai_service.generate_response(text=text, image_path=image_path),
+                    ai_service.generate_response(text=text),
                     timeout=300 
                 )
                 print("Fallback AI service returned for /chat after error.")
             except Exception as fallback_error:
                 print(f"Fallback also failed: {str(fallback_error)}")
                 raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         
         # Return explanation only - animations are now generated on-demand
         # If Manim code is present, return base64 video
@@ -257,11 +251,8 @@ async def chat_stream_endpoint(
                 ai_service._connection_tested = True
         
         try:
-            explanation = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=image_path),
-                timeout=300
             explanation, manim_code = await asyncio.wait_for(
-                ai_service.generate_response(text=text, image_path=None),
+                ai_service.generate_response(text=text),
                 timeout=300  # seconds - increased from 60
             )
             elapsed_time = time.time() - start_time
@@ -270,8 +261,8 @@ async def chat_stream_endpoint(
         except asyncio.TimeoutError:
             print("AI service timed out for /chat/stream, trying fallback mode...")
             try:
-                explanation = await asyncio.wait_for(
-                    ai_service.generate_response(text=text, image_path=image_path),
+                explanation, manim_code = await asyncio.wait_for(
+                    ai_service.generate_response(text=text),
                     timeout=60  # shorter timeout for fallback
                 )
                 print("Fallback AI service returned for /chat/stream.")
@@ -283,19 +274,14 @@ async def chat_stream_endpoint(
             print(f"AI service error for /chat/stream: {str(e)}")
             # Try fallback even for other errors
             try:
-                explanation = await asyncio.wait_for(
-                    ai_service.generate_response(text=text, image_path=image_path),
+                explanation, manim_code = await asyncio.wait_for(
+                    ai_service.generate_response(text=text),
                     timeout=60
                 )
                 print("Fallback AI service returned for /chat/stream after error.")
             except Exception as fallback_error:
                 print(f"Fallback also failed: {str(fallback_error)}")
                 raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         request_id = str(uuid.uuid4())
         print(f"[Main] Generated request_id: {request_id}")
         print(f"[Main] manim_code is None: {manim_code is None}")
@@ -373,7 +359,7 @@ async def get_video_base64(request_id: str):
 @app.post("/chat-json", response_model=ChatResponse)
 async def chat_json_endpoint(request: ChatRequest):
     """
-    Alternative chat endpoint that accepts JSON with base64 image
+    Alternative chat endpoint that accepts JSON
     
     This endpoint accepts:
     - text: Required string
@@ -382,22 +368,9 @@ async def chat_json_endpoint(request: ChatRequest):
         input_type = InputType.TEXT_ONLY
         text = request.text
         
-        # Generate AI response (explanation only)
-        explanation = await ai_service.generate_response(
-            text=text, 
-            image_path=image_path
-        )
-
-        # Clean up temporary files
-        if image_path and os.path.exists(image_path):
-            try:
-                os.remove(image_path)
-            except Exception as e:
-                print(f"Failed to clean up image file: {e}")
         # Generate AI response
         explanation, manim_code = await ai_service.generate_response(
-            text=text,
-            image_path=None
+            text=text
         )
         
         # Generate animation if Manim code was provided

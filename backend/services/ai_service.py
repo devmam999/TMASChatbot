@@ -1,6 +1,6 @@
 """
 AI service for communicating with Anthropic Claude API
-Handles text and image processing, generates explanations and Manim code
+Handles text processing, generates explanations and Manim code
 """
 import httpx
 import json
@@ -31,32 +31,45 @@ class AIService:
     
     async def generate_response(
         self, 
-        text: Optional[str] = None, 
-        image_path: Optional[str] = None
-    ) -> str:  # Changed return type from Tuple[str, Optional[str]] to just str
+        text: Optional[str] = None
+    ) -> Tuple[str, Optional[str]]:
         """
-        Generate AI response with explanation only (Gemini).
-        Animation generation is now handled separately.
+        Generate AI response with explanation (Gemini) and Manim code (Claude).
+        Returns explanation even if Manim code generation fails.
         
         Args:
             text: User's text input
-            image_path: Path to uploaded image file
             
         Returns:
-            explanation: Just the explanation text
+            Tuple of (explanation, manim_code)
         """
-        if not text and not image_path:
+        if not text:
             raise ValueError("No input provided for AI request")
 
         try:
-            # Build Gemini prompt for explanation only
-            gemini_prompt = self._build_explanation_prompt(text, image_path)
-            # Get explanation from Gemini
-            explanation = await self._get_gemini_explanation(gemini_prompt, image_path)
-            return explanation  # Return only explanation, no manim code
+            # 1. Build Gemini prompt
+            gemini_prompt = self._build_explanation_prompt(text)
+            # 2. Get explanation from Gemini
+            explanation = await self._get_gemini_explanation(gemini_prompt)
 
         except Exception as e:
             raise Exception(f"Failed to generate explanation: {str(e)}")
+
+        manim_code = None
+        try:
+            # 3. Build Claude prompt using Gemini explanation
+            claude_prompt = self._build_manim_prompt(text, explanation)
+            # 4. Prepare messages for Claude
+            messages = self._prepare_messages(claude_prompt, None)
+            # 5. Get Manim code from Claude
+            response = await self._make_api_request(messages)
+            _, manim_code = self._parse_response(response)
+
+        except Exception as e:
+            # Log the error, but still return the explanation
+            print(f"Claude API failed: {str(e)}")
+
+        return explanation, manim_code
     
     # async def generate_simple_response(self, prompt: str) -> Tuple[str, str]:
     #     """
@@ -149,38 +162,6 @@ class AIService:
                 
 #         except Exception as e:
 #             raise Exception(f"Failed to generate simple animation response: {str(e)}")
-    
-    async def generate_animation_code(
-        self, 
-        explanation: str
-    ) -> str:
-        """
-        Generate Manim animation code based on an explanation.
-        This is called separately when user clicks "Generate Animation".
-        
-        Args:
-            explanation: The explanation text to create animation for
-            
-        Returns:
-            manim_code: Python code for Manim animation
-        """
-        try:
-            # Build Claude prompt using the explanation
-            claude_prompt = self._build_manim_prompt(explanation, explanation)
-            # Prepare messages for Claude
-            messages = self._prepare_messages(claude_prompt, None)
-            # Get Manim code from Claude
-            response = await self._make_api_request(messages)
-            _, manim_code = self._parse_response(response)
-            
-            if not manim_code:
-                raise Exception("No animation code could be generated for this explanation")
-                
-            return manim_code
-            
-        except Exception as e:
-            raise Exception(f"Failed to generate animation code: {str(e)}")
-    
     
     async def generate_quiz(self, explanation: str) -> List[Dict[str, Any]]:
         """
@@ -299,24 +280,68 @@ class AIService:
     #         print("Using fallback questions due to parsing error")
     #         return self._create_fallback_questions(response_text)
     
-    def _build_explanation_prompt(self, text, image_path):
+    def _build_explanation_prompt(self, text):
         # Build a prompt for Gemini (focus on explanation only)
         base_prompt = """
-                You are an expert educator. 
-                Your task is to:
-                1. Provide a clear, educational explanation of the concept
+You are an expert educator specializing in clear, structured explanations.
 
-                OUTPUT FORMAT
-                Educational Explanation — 2–3 paragraphs, simple and clear, describing the concept and its real-world relevance
-                """
-        if text and image_path:
-            return f"{base_prompt}\n\nUSER INPUT:\nText: {text}\nImage: [User uploaded an image]\n\nPlease analyze both the text and image to provide a comprehensive explanation."
-        elif text:
+CRITICAL: You MUST format your response with exactly the structure shown below. Do not deviate from this format.
+
+REQUIRED OUTPUT STRUCTURE:
+1. Start with **Background** section
+2. Follow with **Core Idea** section  
+3. Then **How It Works** section
+4. End with **Real-World Relevance** section
+5. Each section must start with a **bolded heading** exactly as shown
+6. Leave TWO blank lines after each section heading
+7. Leave TWO blank lines after each section content
+
+SECTION REQUIREMENTS:
+- Each section: 2-4 short sentences
+- Each section: Include one concrete example or analogy
+- Use simple, accessible language
+- Define technical terms in plain language
+
+EXAMPLE FORMAT (follow this EXACTLY):
+**Background**
+
+[2-4 sentences with one example about what the concept is and its history]
+
+**Core Idea** 
+
+[2-4 sentences with one example explaining the main principle]
+
+**How It Works**
+
+[2-4 sentences with one example showing the mechanism or process]
+
+**Real-World Relevance**
+
+[2-4 sentences with one example of practical applications and why it matters]
+
+EXAMPLE OUTPUT:
+**Background**
+
+Ohm's Law describes the relationship between voltage (V), current (I), and resistance (R) in electrical circuits. It was formulated by Georg Ohm and is fundamental for circuit analysis. Example: A 10V battery across a 5Ω resistor produces 2A of current.
+
+**Core Idea**
+
+Current through a conductor is proportional to voltage and inversely proportional to resistance. The mathematical relationship is V = I × R. Analogy: voltage is water pressure, current is flow rate, resistance is pipe narrowness.
+
+**How It Works**
+
+Engineers measure any two quantities and calculate the third using V = I × R. This works for most materials under constant conditions but not for nonlinear components like diodes. Example: Doubling voltage across a resistor doubles the current if resistance stays constant.
+
+**Real-World Relevance**
+
+Ohm's Law is essential for designing electronic devices, from LED circuits to power supplies. It prevents component damage by ensuring proper current flow. Example: Calculating resistor size for LED protection uses (V_source - V_LED) / desired_current.
+
+IMPORTANT: Follow this exact format with bolded headings and TWO blank lines between sections. Do not write a continuous paragraph.
+"""
+        if text:
             return f"{base_prompt}\n\nUSER INPUT:\nText: {text}\n\nPlease provide an explanation for this concept."
-        elif image_path:
-            return f"{base_prompt}\n\nUSER INPUT:\nImage: [User uploaded an image]\n\nPlease analyze the image content and provide an explanation."
         else:
-            raise ValueError("Either text or image must be provided")
+            raise ValueError("Text input must be provided")
         
     def _build_manim_prompt(self, text, explanation):
         # Build a prompt for Claude (focus on Manim code only)
@@ -405,18 +430,14 @@ class ConceptAnimation(Scene):
         if text:
             return f"{base_prompt}\n\nUSER INPUT:\nText: {text}\n\nPlease create a Manim animation for this concept."
         else:
-            raise ValueError("Either text or image must be provided")
+            raise ValueError("Text input must be provided")
     
-    async def _get_gemini_explanation(self, prompt: str, image_path: Optional[str] = None) -> str:
-        """Get explanation from Gemini, handling image if provided"""
+    async def _get_gemini_explanation(self, prompt: str) -> str:
+        """Get explanation from Gemini"""
         client = genai.Client(api_key=self.gemini_api_key)
         model = self.gemini_model
 
         parts = [types.Part.from_text(text=prompt)]
-        if image_path:
-            with open(image_path, "rb") as img_file:
-                img_bytes = img_file.read()
-            parts.append(types.Part.from_data(data=img_bytes, mime_type="image/png"))
 
         contents = [
             types.Content(
@@ -433,7 +454,87 @@ class ConceptAnimation(Scene):
             return response.text
 
         explanation = await asyncio.to_thread(run_gemini)
-        return explanation
+        return self._format_explanation_response(explanation)
+    
+    def _format_explanation_response(self, response_text: str) -> str:
+        """
+        Format Gemini response to ensure proper section structure with line breaks.
+        If the response already has proper formatting, enhance it with proper spacing.
+        If it's a blob, attempt to structure it into sections.
+        """
+        # Check if response already has proper section formatting
+        if "**Background**" in response_text and "**Core Idea**" in response_text:
+            # Enhance existing formatting with proper line breaks
+            return self._enhance_existing_formatting(response_text)
+        
+        # If it's a blob, try to structure it
+        try:
+            # Split into sentences
+            sentences = [s.strip() for s in response_text.split('.') if s.strip()]
+            
+            # Create structured response
+            sections = {
+                "**Background**": [],
+                "**Core Idea**": [],
+                "**How It Works**": [],
+                "**Real-World Relevance**": []
+            }
+            
+            # Distribute sentences across sections
+            total_sentences = len(sentences)
+            sentences_per_section = max(2, total_sentences // 4)
+            
+            current_section = 0
+            section_names = list(sections.keys())
+            
+            for i, sentence in enumerate(sentences):
+                if sentence and not sentence.endswith('.'):
+                    sentence += '.'
+                
+                if current_section < len(section_names):
+                    sections[section_names[current_section]].append(sentence)
+                    
+                    # Move to next section if current one has enough sentences
+                    if len(sections[section_names[current_section]]) >= sentences_per_section and current_section < len(section_names) - 1:
+                        current_section += 1
+            
+            # Build formatted response with proper spacing
+            formatted_response = ""
+            for section_name, section_sentences in sections.items():
+                if section_sentences:
+                    formatted_response += f"{section_name}\n\n"
+                    formatted_response += " ".join(section_sentences) + "\n\n"
+            
+            return formatted_response.strip()
+            
+        except Exception as e:
+            # If formatting fails, return original response
+            print(f"Failed to format explanation response: {e}")
+            return response_text
+    
+    def _enhance_existing_formatting(self, response_text: str) -> str:
+        """
+        Enhance existing section formatting with proper line breaks.
+        """
+        import re
+        
+        # Split by section headers
+        sections = re.split(r'(\*\*[^*]+\*\*)', response_text)
+        
+        formatted_response = ""
+        for i, part in enumerate(sections):
+            part = part.strip()
+            if not part:
+                continue
+                
+            # If this is a section header (starts with **)
+            if part.startswith('**') and part.endswith('**'):
+                formatted_response += f"{part}\n\n"
+            else:
+                # This is section content
+                formatted_response += f"{part}\n\n"
+        
+        return formatted_response.strip()
     
 #     def _build_prompt(self, text: Optional[str], image_path: Optional[str]) -> str:
 #         """Build the prompt based on input type"""
@@ -529,7 +630,7 @@ class ConceptAnimation(Scene):
 #         else:
 #             raise ValueError("Either text or image must be provided")
     
-    def _prepare_messages(self, prompt: str, image_path: Optional[str]) -> list:
+    def _prepare_messages(self, prompt: str) -> list:
         """Prepare messages for the API request"""
         messages = [
             {
@@ -538,33 +639,11 @@ class ConceptAnimation(Scene):
             }
         ]
         
-        if image_path:
-            # Read and encode the image
-            with open(image_path, "rb") as image_file:
-                image_data = base64.b64encode(image_file.read()).decode('utf-8')
-            
-            # Add image message
-            messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{image_data}"
-                        }
-                    }
-                ]
-            })
-        else:
-            # Text-only message
-            messages.append({
-                "role": "user",
-                "content": prompt
-            })
+        # Text-only message
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
         
         return messages
     
@@ -683,8 +762,7 @@ class ConceptAnimation(Scene):
     async def test_connection(self) -> bool:
         """Test the API connection"""
         try:
-            # Use the same format as the working API calls
-            anthropic_messages = [
+            messages = [
                 {"role": "user", "content": "Hello, this is a test message."}
             ]
             
@@ -693,17 +771,16 @@ class ConceptAnimation(Scene):
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "x-api-key": self.claude_api_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
+                        "Authorization": f"Bearer {self.claude_api_key}",
+                        "Content-Type": "application/json",
                         "HTTP-Referer": "http://localhost:5173",
-                        "X-Title": "TMAS Chatbot"
+                                                    "X-Title": "TMAS Chatbot"
                     },
                     json={
                         "model": self.claude_model,
+                        "messages": messages,
                         "max_tokens": 5,  # Very short response for test
-                        "temperature": 0.7,
-                        "messages": anthropic_messages
+                        "temperature": 0.7
                     }
                 )
                 
@@ -712,7 +789,7 @@ class ConceptAnimation(Scene):
                     return False
                 
                 result = response.json()
-                return "content" in result and len(result["content"]) > 0
+                return "choices" in result and len(result["choices"]) > 0
                 
         except httpx.TimeoutException:
             print("Connection test timed out")

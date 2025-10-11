@@ -68,9 +68,6 @@ Try asking me something like "Explain how a binary search tree works". Afterward
         : message
     ));
   };
-
-  const handleSendMessage = async (text: string, file?: File) => {
-    if (!text.trim() && !file) return;
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
